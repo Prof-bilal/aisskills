@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Local-first AI Skills Platform workspace",
+  "license": "MIT",
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=20"
