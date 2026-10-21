@@ -33,10 +33,10 @@ import {
   saveProjectConfig,
   saveUserConfig,
   SkillRegistry
-} from "@aiskills/core";
-import { getBuiltInPacksDirectory, PackRegistry } from "@aiskills/core";
-import type { VerificationCheck } from "@aiskills/core";
-import { createBuiltInAdapters, detectAgents, SAFE_READ_PERMISSIONS } from "@aiskills/adapters-local";
+} from "aiskills-core";
+import { getBuiltInPacksDirectory, PackRegistry } from "aiskills-core";
+import type { VerificationCheck } from "aiskills-core";
+import { createBuiltInAdapters, detectAgents, SAFE_READ_PERMISSIONS } from "aiskills-adapters-local";
 import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";

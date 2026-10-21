@@ -224,7 +224,8 @@ Implemented:
 
 Remaining external action:
 
-- authenticate an npm account with access to the `@aiskills` scope and publish
+- authenticate an npm account with permission to publish the package names and
+  publish them in dependency order
   the packages in dependency order
 
 ## Release sequence

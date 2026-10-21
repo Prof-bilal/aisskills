@@ -1,5 +1,5 @@
 {
-  "name": "@aiskills/adapters-local",
+  "name": "aiskills-adapters-local",
   "version": "0.1.0",
   "description": "Local executable discovery and agent adapter contracts",
   "type": "module",

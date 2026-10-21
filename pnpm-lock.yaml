@@ -177,10 +177,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@aiskills/adapters-local':
+      aiskills-adapters-local:
         specifier: workspace:*
         version: link:../adapters/local
-      '@aiskills/core':
+      aiskills-core:
         specifier: workspace:*
         version: link:../core
 
@@ -192,7 +192,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@aiskills/core':
+      aiskills-core:
         specifier: workspace:*
         version: link:../core
 

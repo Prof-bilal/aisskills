@@ -1,5 +1,5 @@
 {
-  "name": "@aiskills/core",
+  "name": "aiskills-core",
   "version": "0.1.0",
   "description": "Provider-neutral AI Skills runtime contracts and utilities",
   "type": "module",

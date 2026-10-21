@@ -101,9 +101,9 @@ their definitions: `core`, `fullstack`, `security`, `research`, and `product`.
 | Package | Purpose |
 | --- | --- |
 | `aiskills` | CLI executable |
-| `@aiskills/core` | Registry, project context, evidence, planning, security, workflows, and lockfile APIs |
-| `@aiskills/adapters-local` | Local agent detection and normalized execution adapters |
-| `@aiskills/sdk` | Constructors for third-party declarative extensions |
+| `aiskills-core` | Registry, project context, evidence, planning, security, workflows, and lockfile APIs |
+| `aiskills-adapters-local` | Local agent detection and normalized execution adapters |
+| `aiskills-sdk` | Constructors for third-party declarative extensions |
 
 ## Publish to npm
 
@@ -127,9 +127,9 @@ pnpm -r pack --pack-destination ./release
 Publish in dependency order:
 
 ```bash
-pnpm --filter @aiskills/core publish --access public
-pnpm --filter @aiskills/adapters-local publish --access public
-pnpm --filter @aiskills/sdk publish --access public
+pnpm --filter aiskills-core publish --access public
+pnpm --filter aiskills-adapters-local publish --access public
+pnpm --filter aiskills-sdk publish --access public
 pnpm --filter aiskills publish --access public
 ```
 
@@ -144,8 +144,8 @@ aiskills --version
 aiskills skills list
 ```
 
-The scoped packages use the `@aiskills` npm namespace. Publishing them
-requires that the authenticated npm account owns or has access to that scope.
+The supporting packages use unscoped names so they can be published by the
+authenticated npm account without requiring an organization scope.
 
 For automated releases, add an `NPM_TOKEN` repository secret and push a
 version tag such as `v0.1.0`. The repository workflow runs the tests and
