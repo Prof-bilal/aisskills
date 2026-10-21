@@ -1,0 +1,12 @@
+schema_version: 1
+id: research
+name: Research
+version: 0.1.0
+description: Core foundation for evidence-backed research tasks.
+skills:
+  - repo-explorer
+  - planner
+  - evidence-first
+dependencies:
+  packs:
+    - core

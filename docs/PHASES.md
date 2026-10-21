@@ -332,4 +332,16 @@ analytics backend, and large skill catalog are explicitly outside the MVP.
 - Phase 0: complete — repository, environment, architecture, risks, and Phase 1 acceptance criteria documented.
 - Phase 1: complete — workspace, packages, CLI foundation, configuration paths, SDK validation, tests, and clean local package installation verified.
 - Phase 2: complete — versioned YAML skill manifests, validation, registry loading, dependency resolution, built-in skills, and `aiskills skills list` verified.
-- Phases 3–15: planned.
+- Phase 3: complete — provider-neutral adapter contract, local executable discovery, version probing, capabilities, and `aiskills agents` verified.
+- Phase 4: complete — profile persistence, agent/pack/mode selection, `aiskills init`, `profile create`, and `profile use` verified.
+- Phase 5: complete — project file, language, framework, package manager, test runner, database, and monorepo detection with evidence/status labels verified.
+- Phase 6: complete — claim states, typed evidence records, evidence priority, contradiction handling, and `aiskills verify` verified.
+- Phase 7: complete — task analysis, workflow selection, minimum-effective skill routing, structured plans, and `aiskills plan` verified.
+- Phase 8: complete — permission-aware normalized execution results, dependency-aware task graphs, bounded parallelism, retries, verified provider argument contracts, and a real read-only Codex adapter task verified.
+- Phase 9: complete — verification reports, completion states, bounded static/test execution, repository security scanning, explicit requirements criteria, and skipped-check reporting verified.
+- Phase 10: complete — pack manifests, pack registry, dependency resolution, five built-in packs, and `aiskills packs list/install/remove` verified.
+- Phase 11: complete — centralized permission assessment, risk levels, mandatory denials, approval escalation, prompt-injection scanning, and executable-plugin installation review verified.
+- Phase 12: complete — goals, milestone relevance, project goal persistence, decision records, categorized memory, candidate learning promotion, and retrospective capture verified.
+- Phase 13: complete — workflow registry, dependency validation, tool manifests, installed-tool detection, capability recommendations, and permission-aware workflow execution boundary verified.
+- Phase 14: complete — validated SDK constructors and safe declarative third-party skill-package loading verified; executable plugins remain on the separately reviewed path.
+- Phase 15: complete — local lockfile generation/loading and package-source abstraction implemented without adding a hosted registry.

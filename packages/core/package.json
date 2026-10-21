@@ -9,7 +9,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "skills"],
+  "files": ["dist", "skills", "packs", "workflows", "tools"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""

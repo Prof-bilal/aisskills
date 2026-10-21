@@ -173,8 +173,13 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  packages/adapters/local: {}
+
   packages/cli:
     dependencies:
+      '@aiskills/adapters-local':
+        specifier: workspace:*
+        version: link:../adapters/local
       '@aiskills/core':
         specifier: workspace:*
         version: link:../core

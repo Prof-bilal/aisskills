@@ -1,0 +1,12 @@
+schema_version: 1
+id: feature-development
+name: Feature Development
+version: 0.1.0
+description: Inspect, plan, implement, test, and review a feature.
+steps:
+  - repo-explorer
+  - planner
+  - evidence-first
+  - completion-checker
+dependencies:
+  workflows: []

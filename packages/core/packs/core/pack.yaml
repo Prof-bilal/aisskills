@@ -1,0 +1,12 @@
+schema_version: 1
+id: core
+name: Core Engineering
+version: 0.1.0
+description: Foundational repository exploration, planning, evidence, and completion skills.
+skills:
+  - repo-explorer
+  - planner
+  - evidence-first
+  - completion-checker
+dependencies:
+  packs: []

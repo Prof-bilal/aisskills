@@ -1,0 +1,13 @@
+schema_version: 1
+id: fullstack
+name: Full Stack
+version: 0.1.0
+description: Core engineering skills for full-stack project work.
+skills:
+  - repo-explorer
+  - planner
+  - evidence-first
+  - completion-checker
+dependencies:
+  packs:
+    - core

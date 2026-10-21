@@ -1,0 +1,11 @@
+schema_version: 1
+id: security
+name: Security
+version: 0.1.0
+description: Evidence-first foundation for security review workflows.
+skills:
+  - repo-explorer
+  - evidence-first
+dependencies:
+  packs:
+    - core

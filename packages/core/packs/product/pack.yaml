@@ -1,0 +1,12 @@
+schema_version: 1
+id: product
+name: Product
+version: 0.1.0
+description: Core foundation for product decisions and goal-aware planning.
+skills:
+  - repo-explorer
+  - planner
+  - completion-checker
+dependencies:
+  packs:
+    - core

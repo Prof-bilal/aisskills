@@ -20,7 +20,9 @@ ai-skills/
 ├── packages/
 │   ├── core/       # domain types and provider-neutral runtime logic
 │   ├── cli/        # aiskills executable and user-facing commands
-│   └── sdk/        # public declarative extension definitions
+│   ├── sdk/        # public declarative extension definitions
+│   └── adapters/
+│       └── local/  # local executable discovery and adapter contracts
 ├── skills/         # built-in declarative skill packages
 ├── packs/          # built-in pack manifests
 ├── workflows/      # built-in workflow definitions
@@ -35,6 +37,7 @@ the core depend on a specific AI provider.
 
 ```text
 CLI ───────► Core
+CLI ───────► Adapters
 SDK ────────► Core domain contracts
 Adapters ───► Core adapter contracts
 Skills ─────► Core manifest contracts
@@ -102,8 +105,8 @@ system safety policy.
 ## Storage strategy
 
 - User configuration and profiles live in an OS-appropriate application-data
-  directory.
-- Project configuration lives in `.ai/` inside the repository.
+  directory as versioned JSON.
+- Project configuration lives in `.ai/config.json` inside the repository.
 - Skill and pack installation state will use a lock file when installation is
   implemented.
 - No absolute path, username, or provider-specific location is part of the
@@ -118,8 +121,8 @@ untrusted data and cannot override system policy or user intent.
 
 ## Phase 1 implementation boundary
 
-Phase 1 should create the workspace, package metadata, a runnable CLI, a small
-core package, SDK foundation types, configuration-path helpers, logging, and
-tests. It should not yet implement agent execution, marketplace behavior,
-third-party plugins, or full orchestration.
+Phase 1 created the workspace, package metadata, runnable CLI, core package, SDK
+foundation, configuration-path helpers, logging, and tests. Phase 2 added the
+skill registry. Phase 3 added local agent detection and adapter contracts.
+Agent task execution remains intentionally deferred until Phase 8.
 

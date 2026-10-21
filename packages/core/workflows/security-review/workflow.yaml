@@ -1,0 +1,11 @@
+schema_version: 1
+id: security-review
+name: Security Review
+version: 0.1.0
+description: Inspect a change, assess permissions, and report security gaps.
+steps:
+  - repo-explorer
+  - evidence-first
+  - completion-checker
+dependencies:
+  workflows: []
