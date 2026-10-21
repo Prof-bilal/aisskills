@@ -6,10 +6,8 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-Version `0.1.1` is the first public release. The repository builds and its test
-suite passes. The CLI and workspace packages are prepared for npm publication,
-but the first public release still requires an npm account with publish access
-to the package names below.
+Public release `0.1.0` is available on npm. The repository currently contains
+the next unreleased package version and the build and test suite pass.
 
 ## Requirements
 
@@ -127,10 +125,10 @@ pnpm -r pack --pack-destination ./release
 Publish in dependency order:
 
 ```bash
-pnpm --filter aiskills-core publish --access public
-pnpm --filter aiskills-adapters-local publish --access public
-pnpm --filter aiskills-sdk publish --access public
-pnpm --filter @prof-bilal/aiskills publish --access public
+npm publish --workspace packages/core --access public
+npm publish --workspace packages/adapters/local --access public
+npm publish --workspace packages/sdk --access public
+npm publish --workspace packages/cli --access public
 ```
 
 After publication, verify the user-facing package in a clean directory:
@@ -139,7 +137,7 @@ After publication, verify the user-facing package in a clean directory:
 mkdir /tmp/aiskills-smoke
 cd /tmp/aiskills-smoke
 npm init -y
-npm install -g @prof-bilal/aiskills@0.1.1
+npm install -g @prof-bilal/aiskills@0.1.0
 aiskills --version
 aiskills skills list
 ```

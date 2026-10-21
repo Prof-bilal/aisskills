@@ -23,15 +23,15 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      - run: pnpm --filter aiskills-core publish --access public --no-git-checks
+      - run: npm publish --workspace packages/core --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: pnpm --filter aiskills-adapters-local publish --access public --no-git-checks
+      - run: npm publish --workspace packages/adapters/local --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: pnpm --filter aiskills-sdk publish --access public --no-git-checks
+      - run: npm publish --workspace packages/sdk --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: pnpm --filter @prof-bilal/aiskills publish --access public --no-git-checks
+      - run: npm publish --workspace packages/cli --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
