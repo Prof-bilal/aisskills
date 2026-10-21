@@ -6,7 +6,7 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-Version `0.1.0` is an early local release. The repository builds and its test
+Version `0.1.1` is the first public release. The repository builds and its test
 suite passes. The CLI and workspace packages are prepared for npm publication,
 but the first public release still requires an npm account with publish access
 to the package names below.
@@ -139,7 +139,7 @@ After publication, verify the user-facing package in a clean directory:
 mkdir /tmp/aiskills-smoke
 cd /tmp/aiskills-smoke
 npm init -y
-npm install -g @prof-bilal/aiskills@0.1.0
+npm install -g @prof-bilal/aiskills@0.1.1
 aiskills --version
 aiskills skills list
 ```
@@ -148,7 +148,7 @@ The supporting packages use unscoped names so they can be published by the
 authenticated npm account without requiring an organization scope.
 
 For automated releases, add an `NPM_TOKEN` repository secret and push a
-version tag such as `v0.1.0`. The repository workflow runs the tests and
+version tag such as `v0.1.1`. The repository workflow runs the tests and
 publishes the packages in dependency order.
 
 ## Development checks
