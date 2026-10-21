@@ -100,7 +100,7 @@ their definitions: `core`, `fullstack`, `security`, `research`, and `product`.
 
 | Package | Purpose |
 | --- | --- |
-| `aiskills` | CLI executable |
+| `@prof-bilal/aiskills` | CLI executable (`aiskills` command) |
 | `aiskills-core` | Registry, project context, evidence, planning, security, workflows, and lockfile APIs |
 | `aiskills-adapters-local` | Local agent detection and normalized execution adapters |
 | `aiskills-sdk` | Constructors for third-party declarative extensions |
@@ -130,7 +130,7 @@ Publish in dependency order:
 pnpm --filter aiskills-core publish --access public
 pnpm --filter aiskills-adapters-local publish --access public
 pnpm --filter aiskills-sdk publish --access public
-pnpm --filter aiskills publish --access public
+pnpm --filter @prof-bilal/aiskills publish --access public
 ```
 
 After publication, verify the user-facing package in a clean directory:
@@ -139,7 +139,7 @@ After publication, verify the user-facing package in a clean directory:
 mkdir /tmp/aiskills-smoke
 cd /tmp/aiskills-smoke
 npm init -y
-npm install -g aiskills@0.1.0
+npm install -g @prof-bilal/aiskills@0.1.0
 aiskills --version
 aiskills skills list
 ```
