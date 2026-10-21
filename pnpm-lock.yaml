@@ -178,11 +178,11 @@ importers:
   packages/cli:
     dependencies:
       aiskills-adapters-local:
-        specifier: workspace:*
-        version: link:../adapters/local
+        specifier: ^0.1.0
+        version: 0.1.0
       aiskills-core:
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.1.0
+        version: 0.1.0
 
   packages/core:
     dependencies:
@@ -193,13 +193,19 @@ importers:
   packages/sdk:
     dependencies:
       aiskills-core:
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.1.0
+        version: 0.1.0
 
 packages:
 
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
+
+  aiskills-adapters-local@0.1.0:
+    resolution: {integrity: sha512-3Ky3CMsuWTeP4bcKJErWEwStt+bVd6CXc83bE+rIdjY6jI+YyRXuvqqR4Z9wh3TqQC/py3lyruYJXI4uZ27Vpw==}
+
+  aiskills-core@0.1.0:
+    resolution: {integrity: sha512-+H+vdVZ8V+qMESMUqg9r9XiZWFFZffjsj7DcpT/lL0bGSWDGH3WJNZ+u3MNxn28yxSDD4nuZf3O6jDEzyEzxKQ==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -219,6 +225,12 @@ snapshots:
   '@types/node@24.19.2':
     dependencies:
       undici-types: 7.24.6
+
+  aiskills-adapters-local@0.1.0: {}
+
+  aiskills-core@0.1.0:
+    dependencies:
+      yaml: 2.9.1
 
   typescript@5.9.3: {}
 
