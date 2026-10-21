@@ -147,6 +147,10 @@ aiskills skills list
 The scoped packages use the `@aiskills` npm namespace. Publishing them
 requires that the authenticated npm account owns or has access to that scope.
 
+For automated releases, add an `NPM_TOKEN` repository secret and push a
+version tag such as `v0.1.0`. The repository workflow runs the tests and
+publishes the packages in dependency order.
+
 ## Development checks
 
 ```bash
