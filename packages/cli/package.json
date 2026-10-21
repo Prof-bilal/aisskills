@@ -1,0 +1,17 @@
+{
+  "name": "aiskills",
+  "version": "0.1.0",
+  "description": "Local-first AI Skills Platform CLI",
+  "type": "module",
+  "bin": {
+    "aiskills": "dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@aiskills/core": "workspace:*"
+  }
+}

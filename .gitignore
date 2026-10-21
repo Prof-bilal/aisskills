@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Local AI Skills state should not be committed from a developer machine.
+.ai/
+
