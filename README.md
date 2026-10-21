@@ -63,6 +63,8 @@ aiskills profile use security
 aiskills plan "review the authentication implementation"
 aiskills verify "authentication is complete" --run-tests --run-static
 aiskills run "inspect the repository architecture"
+aiskills run "find security risks in this repository" --agent claude
+aiskills run "explain the database design" --agent codex
 aiskills security
 aiskills goals
 aiskills workflows
@@ -71,7 +73,12 @@ aiskills memory
 ```
 
 `aiskills run` is read-only by default and requires a configured, available
-agent. State-changing operations remain subject to the permission policy.
+agent. Pass `--agent codex`, `--agent claude`, `--agent opencode`, or
+`--agent gemini` to choose the provider explicitly. `openai` and `gpt` are
+aliases for Codex. During execution the CLI loads the routed skills, starts
+the real local provider process, streams its live output, and then prints the
+final status. State-changing operations remain subject to the permission
+policy.
 
 ## Built-in skills
 

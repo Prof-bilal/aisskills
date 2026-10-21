@@ -1,6 +1,6 @@
 {
   "name": "aiskills-sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "SDK foundations for declarative AI Skills extensions",
   "type": "module",
   "license": "MIT",

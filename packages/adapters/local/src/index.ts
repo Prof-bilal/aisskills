@@ -5,12 +5,14 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-function runCommand(command: string, args: string[], options: Parameters<typeof execFile>[2]): Promise<{ stdout: string; stderr: string }> {
+function runCommand(command: string, args: string[], options: Parameters<typeof execFile>[2], onOutput?: (chunk: string) => void): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = execFile(command, args, options, (error, stdout, stderr) => {
       if (error) reject(Object.assign(error, { stdout, stderr }));
       else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
+    child.stdout?.on("data", (chunk: Buffer | string) => onOutput?.(String(chunk)));
+    child.stderr?.on("data", (chunk: Buffer | string) => onOutput?.(String(chunk)));
     child.stdin?.end();
   });
 }
@@ -39,6 +41,7 @@ export interface AgentTask {
   readOnly?: boolean;
   permissions?: string[];
   timeoutMs?: number;
+  onOutput?: (chunk: string) => void;
 }
 
 export type ExecutionStatus = "completed" | "failed" | "unsupported" | "blocked";
@@ -160,7 +163,7 @@ export class CommandAgentAdapter implements AgentAdapter {
             timeout: _task.timeoutMs ?? defaultExecutionTimeoutMs,
             windowsHide: true,
             maxBuffer: 4 * 1024 * 1024
-          });
+          }, _task.onOutput);
           return { status: "completed", message: `${this.name} completed the task.`, output: `${result.stdout}${result.stderr}`.trim(), durationMs: Date.now() - started, attempts: attempt, permissions };
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error);

@@ -1,6 +1,6 @@
 {
   "name": "aiskills-adapters-local",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Local executable discovery and agent adapter contracts",
   "type": "module",
   "license": "MIT",

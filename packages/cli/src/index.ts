@@ -65,6 +65,7 @@ Commands:
   verify     Verify a task or claim
 
 Options:
+  --agent    Choose the provider: codex, claude, opencode, or gemini
   --help     Show this help
   --version  Show the installed version
 `;
@@ -373,9 +374,15 @@ async function managePacks(args: string[]): Promise<number> {
 }
 
 async function runTask(args: string[]): Promise<number> {
-  const task = args.filter((arg) => !arg.startsWith("--")).join(" ").trim();
+  const parsed = parseRunArguments(args);
+  const task = parsed.task;
   if (!task) {
-    logger.error('A task is required. Example: aiskills run "review authentication"');
+    logger.error('A task is required. Example: aiskills run "review authentication" --agent claude');
+    return 2;
+  }
+  const requestedAgent = parsed.agent ? normalizeAgentId(parsed.agent) : undefined;
+  if (parsed.agent && !requestedAgent) {
+    logger.error(`Unknown agent "${parsed.agent}". Choose codex, claude, opencode, or gemini.`);
     return 2;
   }
   const context = await detectProjectContext();
@@ -384,20 +391,25 @@ async function runTask(args: string[]): Promise<number> {
   const config = await loadUserConfig();
   const profile = config.profiles[config.activeProfile];
   const configuredAgents = profile ? [...(profile.agents.primary ? [profile.agents.primary] : []), ...profile.agents.fallback] : [];
+  const selectedAgents = requestedAgent ? [requestedAgent] : configuredAgents;
   const adapters = createBuiltInAdapters();
 
   console.log(`Task: ${task}`);
   console.log(`Workflow: ${plan.workflow}`);
   console.log(`Skills: ${plan.selectedSkills.join(", ") || "none"}`);
-  console.log(`Agents: ${configuredAgents.join(", ") || "none selected"}`);
-  if (!configuredAgents.length) {
+  console.log("\nLoading skills...");
+  for (const skillId of plan.selectedSkills) console.log(`  ✓ ${skillId}`);
+  console.log(`Skills loaded: ${plan.selectedSkills.length}`);
+  console.log(`Agents: ${selectedAgents.join(", ") || "none selected"}`);
+  if (requestedAgent) console.log(`Selection: explicit (${requestedAgent})`);
+  if (!selectedAgents.length) {
     console.log("Status: BLOCKED");
     console.log("Reason: no agent is configured in the active profile.");
     return 1;
   }
 
   const unavailable: string[] = [];
-  for (const agentId of [...new Set(configuredAgents)]) {
+  for (const agentId of [...new Set(selectedAgents)]) {
     const adapter = adapters.find((candidate) => candidate.id === agentId);
     if (!adapter) {
       unavailable.push(`${agentId}: adapter is not installed`);
@@ -408,8 +420,27 @@ async function runTask(args: string[]): Promise<number> {
       unavailable.push(`${availability.name}: ${availability.reason ?? "not available"}`);
       continue;
     }
-    console.log(`Agent: ${availability.name}`);
-    const result = await adapter.execute({ prompt: task, workingDirectory: context.root, readOnly: true, permissions: [...SAFE_READ_PERMISSIONS] });
+    console.log(`\nAgent: ${availability.name}`);
+    console.log(`Starting terminal process: ${availability.executable ?? agentId}`);
+    console.log(`Working: ${availability.name} is processing your task...`);
+    let streamedOutput = false;
+    const result = await adapter.execute({
+      prompt: task,
+      workingDirectory: context.root,
+      readOnly: true,
+      permissions: [...SAFE_READ_PERMISSIONS],
+      onOutput: (chunk) => {
+        if (!streamedOutput) {
+          process.stdout.write(`\n--- ${availability.name} live output ---\n`);
+          streamedOutput = true;
+        }
+        process.stdout.write(chunk);
+      }
+    });
+    if (streamedOutput) {
+      if (!process.stdout.isTTY || !result.output?.endsWith("\n")) process.stdout.write("\n");
+      process.stdout.write(`--- End ${availability.name} output ---\n`);
+    }
     console.log(`Status: ${result.status === "completed" ? "COMPLETE" : result.status === "unsupported" ? "NEEDS USER ACTION" : result.status.toUpperCase()}`);
     console.log(`Execution: ${result.message}`);
     console.log(`Permissions: ${result.permissions.join(", ") || "none"}`);
@@ -419,6 +450,41 @@ async function runTask(args: string[]): Promise<number> {
   console.log("Status: BLOCKED");
   console.log(`Reason: all configured agents were unavailable or failed. ${unavailable.join(" | ")}`);
   return 1;
+}
+
+function parseRunArguments(args: string[]): { task: string; agent?: string } {
+  const taskParts: string[] = [];
+  let agent: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--agent") {
+      agent = args[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--agent=")) {
+      agent = arg.slice("--agent=".length);
+      continue;
+    }
+    if (!arg.startsWith("--")) taskParts.push(arg);
+  }
+  return { task: taskParts.join(" ").trim(), agent };
+}
+
+function normalizeAgentId(value: string): string | undefined {
+  const aliases: Record<string, string> = {
+    codex: "codex",
+    openai: "codex",
+    gpt: "codex",
+    "gpt-5": "codex",
+    claude: "claude",
+    "claude-code": "claude",
+    opencode: "opencode",
+    "open-code": "opencode",
+    gemini: "gemini",
+    "gemini-cli": "gemini"
+  };
+  return aliases[value.trim().toLowerCase()];
 }
 
 async function securityCheck(args: string[]): Promise<number> {
