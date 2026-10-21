@@ -1,0 +1,15 @@
+schema_version: 1
+id: integration-verifier
+name: Integration Verifier
+version: 0.1.0
+category: qa
+description: Verify contracts and behavior across services, packages, tools, agents, and external boundaries.
+capabilities: [integration-testing, contract-verification]
+requires:
+  permissions: [repository.read, shell.execute]
+recommended_tools: [pnpm]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [qa-engineer, requirements-checker, evidence-first]
+checks: [contracts, integration-tests, failure-reporting]
+risk_level: medium

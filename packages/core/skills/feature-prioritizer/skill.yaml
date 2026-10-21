@@ -1,0 +1,15 @@
+schema_version: 1
+id: feature-prioritizer
+name: Feature Prioritizer
+version: 0.1.0
+category: think
+description: Rank proposed work against goals, user value, evidence, effort, risk, and opportunity cost.
+capabilities: [prioritization, goal-alignment]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [planner, evidence-first]
+checks: [goal-fit, value, effort, risk]
+risk_level: low

@@ -1,0 +1,15 @@
+schema_version: 1
+id: secrets-review
+name: Secrets Review
+version: 0.1.0
+category: security
+description: Detect exposed credentials and review secret storage, rotation, logging, and access boundaries without reading secret values unnecessarily.
+capabilities: [secrets-security, credential-exposure]
+requires:
+  permissions: [repository.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [security-reviewer, evidence-first]
+checks: [secret-exposure, storage, rotation, logging]
+risk_level: high

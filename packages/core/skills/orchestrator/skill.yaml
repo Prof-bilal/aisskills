@@ -1,0 +1,18 @@
+schema_version: 1
+id: orchestrator
+name: Orchestrator
+version: 0.1.0
+category: core
+description: Coordinate dependent skills, agents, tools, permissions, and verification steps into one bounded task.
+capabilities:
+  - task-orchestration
+  - dependency-management
+requires:
+  permissions:
+    - repository.read
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [planner, evidence-first]
+checks: [task-graph, permission-boundary]
+risk_level: medium

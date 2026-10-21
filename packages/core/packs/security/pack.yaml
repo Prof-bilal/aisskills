@@ -6,6 +6,16 @@ description: Evidence-first foundation for security review workflows.
 skills:
   - repo-explorer
   - evidence-first
+  - security-reviewer
+  - auth-security
+  - authorization-security
+  - input-validation
+  - api-security
+  - dependency-security
+  - secrets-review
+  - agent-security
+  - prompt-injection-review
+  - threat-model
 dependencies:
   packs:
     - core

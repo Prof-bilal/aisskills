@@ -1,0 +1,15 @@
+schema_version: 1
+id: technical-writer
+name: Technical Writer
+version: 0.1.0
+category: build
+description: Produce accurate developer documentation from verified repository behavior and explicit assumptions.
+capabilities: [technical-writing, documentation]
+requires:
+  permissions: [repository.read, repository.write]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, evidence-first, completion-checker]
+checks: [accuracy, examples, completeness]
+risk_level: low

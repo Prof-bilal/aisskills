@@ -1,0 +1,15 @@
+schema_version: 1
+id: authorization-security
+name: Authorization Security
+version: 0.1.0
+category: security
+description: Review permissions, roles, ownership checks, policy enforcement, and privilege escalation paths.
+capabilities: [authorization-security, access-control]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [security-reviewer, auth-security]
+checks: [access-control, privilege-escalation, tenant-isolation]
+risk_level: high

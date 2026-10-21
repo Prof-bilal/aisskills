@@ -1,0 +1,15 @@
+schema_version: 1
+id: idea-validator
+name: Idea Validator
+version: 0.1.0
+category: think
+description: Challenge an idea against user need, evidence, alternatives, feasibility, and measurable validation steps.
+capabilities: [idea-validation, product-discovery]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [researcher, evidence-first, completion-checker]
+checks: [user-need, evidence-quality, validation-plan]
+risk_level: low

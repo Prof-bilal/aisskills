@@ -1,0 +1,15 @@
+schema_version: 1
+id: fullstack-engineer
+name: Full Stack Engineer
+version: 0.1.0
+category: build
+description: Coordinate end-to-end product changes across frontend, backend, data, tests, and deployment boundaries.
+capabilities: [fullstack-development, integration]
+requires:
+  permissions: [repository.read, repository.write]
+recommended_tools: [git, pnpm]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, frontend-engineer, orchestrator]
+checks: [integration, tests, requirements]
+risk_level: medium

@@ -1,0 +1,15 @@
+schema_version: 1
+id: requirements-checker
+name: Requirements Checker
+version: 0.1.0
+category: qa
+description: Map stated requirements to implementation evidence and report satisfied, missing, contradictory, and unverified items.
+capabilities: [requirements-checking, traceability]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [evidence-first, completion-checker]
+checks: [traceability, missing-requirements, contradiction]
+risk_level: low

@@ -1,0 +1,17 @@
+schema_version: 1
+id: simplify
+name: Simplify
+version: 0.1.0
+category: core
+description: Reduce unnecessary complexity while preserving requirements, safety, and evidence-backed behavior.
+capabilities:
+  - simplification
+  - maintainability-review
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, completion-checker]
+checks: [complexity, regression-risk]
+risk_level: low

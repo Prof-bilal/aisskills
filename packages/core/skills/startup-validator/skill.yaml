@@ -1,0 +1,15 @@
+schema_version: 1
+id: startup-validator
+name: Startup Validator
+version: 0.1.0
+category: think
+description: Assess a product concept's user problem, urgency, differentiation, distribution, retention, and validation evidence.
+capabilities: [startup-validation, market-discovery]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [researcher, idea-validator, grill-me]
+checks: [problem, urgency, differentiation, distribution, retention]
+risk_level: medium

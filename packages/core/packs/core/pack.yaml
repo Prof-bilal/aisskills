@@ -6,7 +6,9 @@ description: Foundational repository exploration, planning, evidence, and comple
 skills:
   - repo-explorer
   - planner
+  - orchestrator
   - evidence-first
+  - simplify
   - completion-checker
 dependencies:
   packs: []

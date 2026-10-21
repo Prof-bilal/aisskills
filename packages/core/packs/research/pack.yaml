@@ -7,6 +7,14 @@ skills:
   - repo-explorer
   - planner
   - evidence-first
+  - researcher
+  - brainstorm
+  - idea-validator
+  - devil-advocate
+  - architecture-review
+  - build-vs-buy
+  - startup-validator
+  - tech-stack-selector
 dependencies:
   packs:
     - core

@@ -1,0 +1,15 @@
+schema_version: 1
+id: build-vs-buy
+name: Build vs Buy
+version: 0.1.0
+category: think
+description: Compare custom implementation, adoption, and integration options using total cost, control, risk, and evidence.
+capabilities: [build-vs-buy, procurement-analysis]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [researcher, tech-stack-selector]
+checks: [total-cost, lock-in, control, feasibility]
+risk_level: medium

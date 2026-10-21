@@ -1,0 +1,15 @@
+schema_version: 1
+id: devil-advocate
+name: Devil's Advocate
+version: 0.1.0
+category: think
+description: Search for credible counterarguments, failure modes, and disconfirming evidence in proposed decisions.
+capabilities: [critical-review, counterargument]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [evidence-first]
+checks: [counterargument, disconfirming-evidence, risks]
+risk_level: low

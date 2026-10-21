@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Local-first AI Skills Platform CLI",
   "type": "module",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "https://github.com/Prof-bilal/aisskills.git", "directory": "packages/cli" },
   "bin": {
     "aiskills": "dist/index.js"
   },

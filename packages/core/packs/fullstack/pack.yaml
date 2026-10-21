@@ -6,8 +6,15 @@ description: Core engineering skills for full-stack project work.
 skills:
   - repo-explorer
   - planner
+  - orchestrator
   - evidence-first
+  - simplify
   - completion-checker
+  - backend-engineer
+  - frontend-engineer
+  - fullstack-engineer
+  - database-architect
+  - ui-designer
 dependencies:
   packs:
     - core

@@ -1,0 +1,15 @@
+schema_version: 1
+id: ui-designer
+name: UI Designer
+version: 0.1.0
+category: build
+description: Translate product intent into coherent, accessible, responsive interface structure and visual decisions.
+capabilities: [interface-design, responsive-design, design-systems]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, planner]
+checks: [layout, consistency, accessibility]
+risk_level: low

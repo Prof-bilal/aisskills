@@ -1,0 +1,15 @@
+schema_version: 1
+id: tech-stack-selector
+name: Tech Stack Selector
+version: 0.1.0
+category: think
+description: Compare technology choices against project constraints, operational cost, ecosystem fit, and evidence.
+capabilities: [technology-selection, tradeoff-analysis]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [researcher, architecture-review]
+checks: [constraints, alternatives, maintenance-cost]
+risk_level: medium

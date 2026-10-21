@@ -1,0 +1,15 @@
+schema_version: 1
+id: dependency-security
+name: Dependency Security
+version: 0.1.0
+category: security
+description: Assess dependency provenance, versions, known risk signals, update policy, and supply-chain exposure.
+capabilities: [dependency-security, supply-chain-security]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: [pnpm]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [security-reviewer, evidence-first]
+checks: [provenance, advisories, lockfile]
+risk_level: medium

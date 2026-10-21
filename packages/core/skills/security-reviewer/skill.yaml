@@ -1,0 +1,15 @@
+schema_version: 1
+id: security-reviewer
+name: Security Reviewer
+version: 0.1.0
+category: security
+description: Review a system's attack surface, trust boundaries, dependencies, secrets, and security evidence.
+capabilities: [security-review, risk-analysis]
+requires:
+  permissions: [repository.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, evidence-first, threat-model]
+checks: [attack-surface, trust-boundaries, findings]
+risk_level: medium

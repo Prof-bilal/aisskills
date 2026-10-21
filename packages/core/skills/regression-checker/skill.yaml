@@ -1,0 +1,15 @@
+schema_version: 1
+id: regression-checker
+name: Regression Checker
+version: 0.1.0
+category: qa
+description: Identify affected behavior and verify that existing functionality remains intact after a change.
+capabilities: [regression-analysis, compatibility-testing]
+requires:
+  permissions: [repository.read, shell.execute]
+recommended_tools: [pnpm]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, qa-engineer, evidence-first]
+checks: [affected-surface, baseline-tests, compatibility]
+risk_level: medium

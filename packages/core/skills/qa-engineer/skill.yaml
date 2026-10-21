@@ -1,0 +1,15 @@
+schema_version: 1
+id: qa-engineer
+name: QA Engineer
+version: 0.1.0
+category: qa
+description: Design proportionate test coverage and execute evidence-backed quality checks across a change.
+capabilities: [quality-assurance, test-planning]
+requires:
+  permissions: [repository.read, shell.execute]
+recommended_tools: [pnpm]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, completion-checker]
+checks: [test-plan, automated-tests, regression-risk]
+risk_level: medium

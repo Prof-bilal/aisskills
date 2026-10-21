@@ -1,0 +1,15 @@
+schema_version: 1
+id: auth-security
+name: Authentication Security
+version: 0.1.0
+category: security
+description: Review authentication flows, credential handling, sessions, tokens, recovery, and identity boundaries.
+capabilities: [authentication-security, identity]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [security-reviewer, evidence-first]
+checks: [credential-handling, session-security, recovery]
+risk_level: high

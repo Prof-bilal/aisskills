@@ -1,0 +1,15 @@
+schema_version: 1
+id: backend-engineer
+name: Backend Engineer
+version: 0.1.0
+category: build
+description: Design, implement, and verify server-side APIs, services, data flows, and operational behavior.
+capabilities: [backend-development, api-design, service-development]
+requires:
+  permissions: [repository.read, repository.write]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, planner, evidence-first]
+checks: [api-contracts, tests, error-handling]
+risk_level: medium

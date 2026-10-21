@@ -1,0 +1,15 @@
+schema_version: 1
+id: grill-me
+name: Grill Me
+version: 0.1.0
+category: think
+description: Apply constructive adversarial questioning to expose weak assumptions before product or architecture commitments.
+capabilities: [adversarial-product-thinking, assumption-testing]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [idea-validator, devil-advocate]
+checks: [need, urgency, differentiation, distribution, retention, complexity]
+risk_level: low

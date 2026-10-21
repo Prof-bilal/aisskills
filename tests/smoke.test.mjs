@@ -84,7 +84,19 @@ test("SDK exposes validated constructors for extension types", () => {
 
 test("skill registry loads built-ins and resolves dependencies", async () => {
   const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
-  assert.equal(registry.list().length, 4);
+  assert.equal(registry.list().length, 38);
+  assert.deepEqual(registry.list().map((skill) => skill.id), [
+    "agent-security", "api-security", "architecture-review", "auth-security",
+    "authorization-security", "backend-engineer", "brainstorm", "build-vs-buy",
+    "code-reviewer", "completion-checker", "database-architect", "dependency-security",
+    "devil-advocate", "evidence-first", "feature-prioritizer", "frontend-engineer",
+    "fullstack-engineer", "grill-me", "idea-validator", "input-validation",
+    "integration-verifier", "orchestrator", "planner", "product-engineer",
+    "prompt-injection-review", "qa-engineer", "regression-checker", "repo-explorer",
+    "requirements-checker", "researcher", "secrets-review",
+    "security-reviewer", "simplify", "startup-validator", "tech-stack-selector",
+    "technical-writer", "threat-model", "ui-designer"
+  ]);
   assert.deepEqual(registry.resolve(["completion-checker"]).map((skill) => skill.id), [
     "repo-explorer",
     "evidence-first",

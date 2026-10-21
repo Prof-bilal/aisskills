@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Local executable discovery and agent adapter contracts",
   "type": "module",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "https://github.com/Prof-bilal/aisskills.git", "directory": "packages/adapters/local" },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -1,0 +1,15 @@
+schema_version: 1
+id: prompt-injection-review
+name: Prompt Injection Review
+version: 0.1.0
+category: security
+description: Detect untrusted instructions that attempt to override authority, exfiltrate secrets, or redirect agent behavior.
+capabilities: [prompt-injection-defense, untrusted-content]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [evidence-first]
+checks: [instruction-override, credential-exfiltration, trust-boundary]
+risk_level: high

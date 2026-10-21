@@ -1,0 +1,15 @@
+schema_version: 1
+id: brainstorm
+name: Brainstorm
+version: 0.1.0
+category: think
+description: Generate diverse solution options, make assumptions visible, and organize ideas for later evaluation.
+capabilities: [ideation, option-generation]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [planner]
+checks: [option-diversity, assumptions]
+risk_level: low

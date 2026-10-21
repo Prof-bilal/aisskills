@@ -1,0 +1,15 @@
+schema_version: 1
+id: code-reviewer
+name: Code Reviewer
+version: 0.1.0
+category: qa
+description: Review changes for correctness, maintainability, security, regressions, and missing tests.
+capabilities: [code-review, defect-detection]
+requires:
+  permissions: [repository.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, evidence-first, simplify]
+checks: [correctness, regression, maintainability, tests]
+risk_level: low

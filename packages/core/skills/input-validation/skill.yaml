@@ -1,0 +1,15 @@
+schema_version: 1
+id: input-validation
+name: Input Validation
+version: 0.1.0
+category: security
+description: Review validation, normalization, encoding, parsing, and unsafe input flows at system boundaries.
+capabilities: [input-validation, secure-parsing]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [security-reviewer, api-security]
+checks: [boundary-validation, injection, parser-safety]
+risk_level: high

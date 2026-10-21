@@ -238,6 +238,26 @@ Deliverables:
 Exit criteria:
 
 - executable extensions are clearly distinguished from declarative skills
+
+## Phase 16 — Skill catalog and release preparation
+
+Goal: provide the initial reusable skill catalog and make the workspace
+installable from npm.
+
+Deliverables:
+
+- complete foundational, build, thinking, QA, and security skill manifests
+- packs that reference the complete skill catalog without duplication
+- package metadata and publish-safe dependency rewriting
+- user-facing README with local setup and npm release instructions
+- tarball checks proving manifests and package dependencies are included
+
+Exit criteria:
+
+- all initial skill manifests load and resolve dependencies
+- all packages build and tests pass
+- packed CLI metadata points to publishable package versions
+- npm publication is completed by an authenticated package owner
 - requested permissions cannot be hidden
 - untrusted content cannot override user or system policy
 

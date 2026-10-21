@@ -6,7 +6,13 @@ description: Core foundation for product decisions and goal-aware planning.
 skills:
   - repo-explorer
   - planner
+  - orchestrator
   - completion-checker
+  - product-engineer
+  - technical-writer
+  - researcher
+  - idea-validator
+  - feature-prioritizer
 dependencies:
   packs:
     - core

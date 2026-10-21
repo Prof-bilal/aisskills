@@ -1,0 +1,15 @@
+schema_version: 1
+id: database-architect
+name: Database Architect
+version: 0.1.0
+category: build
+description: Design and review schemas, queries, migrations, data integrity, and operational database tradeoffs.
+capabilities: [database-design, data-modeling, migration-review]
+requires:
+  permissions: [repository.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, evidence-first]
+checks: [schema-integrity, migration-safety, query-performance]
+risk_level: medium

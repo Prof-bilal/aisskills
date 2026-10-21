@@ -1,0 +1,15 @@
+schema_version: 1
+id: architecture-review
+name: Architecture Review
+version: 0.1.0
+category: think
+description: Evaluate system boundaries, dependencies, failure modes, scalability, and operational tradeoffs from repository evidence.
+capabilities: [architecture-review, system-design]
+requires:
+  permissions: [repository.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, evidence-first, devil-advocate]
+checks: [boundaries, dependencies, failure-modes, operability]
+risk_level: medium

@@ -1,0 +1,15 @@
+schema_version: 1
+id: product-engineer
+name: Product Engineer
+version: 0.1.0
+category: build
+description: Connect user outcomes, product requirements, implementation choices, and measurable verification.
+capabilities: [product-development, requirements, delivery]
+requires:
+  permissions: [repository.read, repository.write]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [planner, completion-checker, evidence-first]
+checks: [requirements, user-value, verification]
+risk_level: medium

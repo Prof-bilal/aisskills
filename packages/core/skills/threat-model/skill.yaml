@@ -1,0 +1,15 @@
+schema_version: 1
+id: threat-model
+name: Threat Model
+version: 0.1.0
+category: security
+description: Model assets, actors, trust boundaries, abuse cases, mitigations, and residual risk for a system or change.
+capabilities: [threat-modeling, abuse-case-analysis]
+requires:
+  permissions: [repository.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, security-reviewer, devil-advocate]
+checks: [assets, actors, boundaries, mitigations, residual-risk]
+risk_level: medium

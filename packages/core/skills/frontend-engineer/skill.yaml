@@ -1,0 +1,15 @@
+schema_version: 1
+id: frontend-engineer
+name: Frontend Engineer
+version: 0.1.0
+category: build
+description: Build and verify browser or client interfaces with attention to behavior, performance, and accessibility.
+capabilities: [frontend-development, ui-implementation, accessibility]
+requires:
+  permissions: [repository.read, repository.write]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [repo-explorer, planner, completion-checker]
+checks: [build, interaction, accessibility]
+risk_level: medium

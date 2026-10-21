@@ -212,24 +212,27 @@ Implemented:
 - permission recording in lock entries
 - local-only implementation with no hosted registry dependency
 
-## Future sequence
+## In progress: Phase 16 — Skill catalog and release preparation
+
+Implemented:
+
+- complete initial catalog of 38 declarative skills
+- expanded core, fullstack, product, research, and security packs
+- publish metadata for all workspace packages
+- README with local usage, package layout, and npm release steps
+- packed tarball verification for dependency rewriting and skill inclusion
+
+Remaining external action:
+
+- authenticate an npm account with access to the `@aiskills` scope and publish
+  the packages in dependency order
+
+## Release sequence
 
 | Phase | Focus | Main proof |
 | --- | --- | --- |
-| 2 | Skill manifests and registry | invalid manifests fail clearly |
-| 3 | Agent adapters | installed agents are detected and represented safely |
-| 4 | Init and profiles | a new user can configure agents and packs interactively |
-| 5 | Project context | repository facts include evidence and confidence |
-| 6 | Evidence engine | claims become verified, contradicted, or unknown based on checks |
-| 7 | Planner and router | only relevant skills are selected |
-| 8 | Execution | one task runs through a permission-aware adapter |
-| 9 | Verification | results include tests, evidence, and a real completion state |
-| 10 | Packs | users install small collections without duplicated definitions |
-| 11 | Security | permissions, risk, and prompt-injection handling are enforced |
-| 12 | Goals and memory | work aligns with goals and records durable context carefully |
-| 13 | Workflows and tools | multi-step work is coordinated and reproducible |
-| 14 | SDK packages | external declarative extensions can be validated safely |
-| 15 | Registry readiness | provenance and future registry integration have a clean boundary |
+| 0–15 | Platform foundation | implementation and verification complete |
+| 16 | Skill catalog and release preparation | manifests load, tarballs are valid, npm auth remains external |
 
 ## MVP release gate
 

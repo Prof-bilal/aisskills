@@ -1,0 +1,15 @@
+schema_version: 1
+id: researcher
+name: Researcher
+version: 0.1.0
+category: think
+description: Gather, compare, and synthesize evidence while separating observations, sources, assumptions, and conclusions.
+capabilities: [research, source-evaluation, synthesis]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: []
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [planner, evidence-first]
+checks: [source-quality, contradiction, uncertainty]
+risk_level: medium

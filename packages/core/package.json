@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Provider-neutral AI Skills runtime contracts and utilities",
   "type": "module",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "https://github.com/Prof-bilal/aisskills.git", "directory": "packages/core" },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
