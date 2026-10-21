@@ -383,29 +383,42 @@ async function runTask(args: string[]): Promise<number> {
   const plan = createTaskPlan(task, context, registry.list().map((skill) => skill.id));
   const config = await loadUserConfig();
   const profile = config.profiles[config.activeProfile];
-  const selectedAgent = profile?.agents.primary;
-  const adapter = createBuiltInAdapters().find((candidate) => candidate.id === selectedAgent);
+  const configuredAgents = profile ? [...(profile.agents.primary ? [profile.agents.primary] : []), ...profile.agents.fallback] : [];
+  const adapters = createBuiltInAdapters();
 
   console.log(`Task: ${task}`);
   console.log(`Workflow: ${plan.workflow}`);
   console.log(`Skills: ${plan.selectedSkills.join(", ") || "none"}`);
-  console.log(`Agent: ${selectedAgent ?? "none selected"}`);
-  if (!adapter) {
+  console.log(`Agents: ${configuredAgents.join(", ") || "none selected"}`);
+  if (!configuredAgents.length) {
     console.log("Status: BLOCKED");
-    console.log("Reason: no configured primary agent is available.");
+    console.log("Reason: no agent is configured in the active profile.");
     return 1;
   }
-  const availability = await adapter.detect();
-  if (availability.status !== "available") {
-    console.log(`Status: BLOCKED`);
-    console.log(`Reason: ${availability.reason ?? `${availability.name} is not available.`}`);
-    return 1;
+
+  const unavailable: string[] = [];
+  for (const agentId of [...new Set(configuredAgents)]) {
+    const adapter = adapters.find((candidate) => candidate.id === agentId);
+    if (!adapter) {
+      unavailable.push(`${agentId}: adapter is not installed`);
+      continue;
+    }
+    const availability = await adapter.detect();
+    if (availability.status !== "available") {
+      unavailable.push(`${availability.name}: ${availability.reason ?? "not available"}`);
+      continue;
+    }
+    console.log(`Agent: ${availability.name}`);
+    const result = await adapter.execute({ prompt: task, workingDirectory: context.root, readOnly: true, permissions: [...SAFE_READ_PERMISSIONS] });
+    console.log(`Status: ${result.status === "completed" ? "COMPLETE" : result.status === "unsupported" ? "NEEDS USER ACTION" : result.status.toUpperCase()}`);
+    console.log(`Execution: ${result.message}`);
+    console.log(`Permissions: ${result.permissions.join(", ") || "none"}`);
+    if (result.status === "completed") return 0;
+    unavailable.push(`${availability.name}: ${result.error ?? result.message}`);
   }
-  const result = await adapter.execute({ prompt: task, workingDirectory: context.root, readOnly: true, permissions: [...SAFE_READ_PERMISSIONS] });
-  console.log(`Status: ${result.status === "completed" ? "COMPLETE" : result.status === "unsupported" ? "NEEDS USER ACTION" : result.status.toUpperCase()}`);
-  console.log(`Execution: ${result.message}`);
-  console.log(`Permissions: ${result.permissions.join(", ") || "none"}`);
-  return result.status === "completed" ? 0 : 1;
+  console.log("Status: BLOCKED");
+  console.log(`Reason: all configured agents were unavailable or failed. ${unavailable.join(" | ")}`);
+  return 1;
 }
 
 async function securityCheck(args: string[]): Promise<number> {

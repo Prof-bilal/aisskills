@@ -1,7 +1,7 @@
 {
   "name": "aiskills-workspace",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local-first AI Skills Platform workspace",
   "license": "MIT",
   "packageManager": "pnpm@12.14.0",
@@ -12,7 +12,8 @@
     "build": "pnpm -r build",
     "test": "pnpm build && node --test tests/*.test.mjs",
     "clean": "pnpm -r clean",
-    "release:check": "pnpm clean && pnpm install --frozen-lockfile && pnpm build && pnpm test && pnpm -r pack --pack-destination ./release"
+    "release:check": "pnpm clean && pnpm install --frozen-lockfile && pnpm build && pnpm test && pnpm -r pack --pack-destination ./release",
+    "release:publish": "pnpm release:check && node scripts/publish-packages.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

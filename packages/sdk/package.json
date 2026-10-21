@@ -1,6 +1,6 @@
 {
   "name": "aiskills-sdk",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "SDK foundations for declarative AI Skills extensions",
   "type": "module",
   "license": "MIT",
@@ -18,6 +18,6 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
   },
   "dependencies": {
-    "aiskills-core": "^0.1.0"
+    "aiskills-core": "workspace:*"
   }
 }
