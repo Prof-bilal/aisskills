@@ -73,7 +73,8 @@ export interface CommandAgentDefinition {
 
 export const SAFE_READ_PERMISSIONS = ["repository.read"] as const;
 
-const defaultTimeoutMs = 2500;
+const defaultDetectionTimeoutMs = 2500;
+const defaultExecutionTimeoutMs = 120_000;
 
 export class CommandAgentAdapter implements AgentAdapter {
   readonly id: string;
@@ -81,7 +82,7 @@ export class CommandAgentAdapter implements AgentAdapter {
   private readonly definition: CommandAgentDefinition;
   private readonly timeoutMs: number;
 
-  constructor(definition: CommandAgentDefinition, timeoutMs = defaultTimeoutMs) {
+  constructor(definition: CommandAgentDefinition, timeoutMs = defaultDetectionTimeoutMs) {
     this.definition = definition;
     this.id = definition.id;
     this.name = definition.name;
@@ -156,7 +157,7 @@ export class CommandAgentAdapter implements AgentAdapter {
         try {
           const result = await runCommand(this.definition.command, this.definition.buildArguments(_task), {
             cwd: _task.workingDirectory,
-            timeout: _task.timeoutMs ?? this.timeoutMs,
+            timeout: _task.timeoutMs ?? defaultExecutionTimeoutMs,
             windowsHide: true,
             maxBuffer: 4 * 1024 * 1024
           });
@@ -212,7 +213,7 @@ export const builtInAgentDefinitions: CommandAgentDefinition[] = [
   }
 ];
 
-export function createBuiltInAdapters(timeoutMs = defaultTimeoutMs): CommandAgentAdapter[] {
+export function createBuiltInAdapters(timeoutMs = defaultDetectionTimeoutMs): CommandAgentAdapter[] {
   return builtInAgentDefinitions.map((definition) => new CommandAgentAdapter(definition, timeoutMs));
 }
 
@@ -223,7 +224,7 @@ export async function detectAgents(adapters = createBuiltInAdapters()): Promise<
 async function findExecutable(command: string): Promise<string | null> {
   const lookup = process.platform === "win32" ? "where.exe" : "which";
   try {
-    const result = await execFileAsync(lookup, [command], { timeout: defaultTimeoutMs, windowsHide: true });
+    const result = await execFileAsync(lookup, [command], { timeout: defaultDetectionTimeoutMs, windowsHide: true });
     const path = result.stdout.trim().split(/\r?\n/)[0];
     if (!path) return null;
     await access(path, constants.X_OK).catch(() => undefined);
