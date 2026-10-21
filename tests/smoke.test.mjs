@@ -250,6 +250,22 @@ test("skill routing selects only available foundational skills", () => {
   ]);
 });
 
+test("skill routing selects domain skills from task capabilities", () => {
+  const available = [
+    "repo-explorer", "planner", "evidence-first", "completion-checker",
+    "security-reviewer", "auth-security", "authorization-security", "api-security",
+    "input-validation", "secrets-review", "backend-engineer", "database-architect",
+    "researcher", "qa-engineer", "code-reviewer", "requirements-checker"
+  ];
+  const security = routeSkills(analyzeTask("review the authentication API and secret handling"), available);
+  assert.deepEqual(security, [
+    "repo-explorer", "planner", "evidence-first", "security-reviewer", "auth-security",
+    "secrets-review", "backend-engineer", "api-security", "completion-checker"
+  ]);
+  const research = routeSkills(analyzeTask("research and compare database technologies"), available);
+  assert.deepEqual(research, ["repo-explorer", "planner", "database-architect", "researcher"]);
+});
+
 test("task plans separate facts, assumptions, claims, and steps", async () => {
   const context = await detectProjectContext(process.cwd());
   const plan = createTaskPlan("implement the missing authentication requirements", context, ["repo-explorer", "planner", "completion-checker"]);

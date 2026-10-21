@@ -329,10 +329,25 @@ export function analyzeTask(task: string): TaskAnalysis {
   else if (/(build|create|implement|add|develop|change)/.test(normalized)) kind = "feature";
 
   const capabilities = new Set<string>();
-  if (/(auth|login|permission|security|secure|secret|token)/.test(normalized)) capabilities.add("security-review");
-  if (/(screenshot|ui|interface|frontend|page|responsive|visual)/.test(normalized)) capabilities.add("frontend");
-  if (/(api|backend|server|database|sql|mongo|endpoint)/.test(normalized)) capabilities.add("backend");
-  if (kind === "research") capabilities.add("research");
+  if (/(auth|login|permission|security|secure|secret|token|threat|vulnerab)/.test(normalized)) capabilities.add("security-review");
+  if (/(auth|login|token|session|credential)/.test(normalized)) capabilities.add("authentication");
+  if (/(permission|role|authorization|access control|privilege)/.test(normalized)) capabilities.add("authorization");
+  if (/(secret|credential|api key|password)/.test(normalized)) capabilities.add("secrets");
+  if (/(validate|validation|sanitize|parser|injection)/.test(normalized)) capabilities.add("input-validation");
+  if (/(prompt injection|untrusted instruction|jailbreak)/.test(normalized)) capabilities.add("prompt-injection");
+  if (/(screenshot|ui|interface|frontend|page|responsive|visual|accessibility)/.test(normalized)) capabilities.add("frontend");
+  if (/(api|backend|server|service|endpoint)/.test(normalized)) capabilities.add("backend");
+  if (/(api|endpoint|http|graphql|route)/.test(normalized)) capabilities.add("api-security");
+  if (/(database|schema|sql|mongo|postgres|query|migration)/.test(normalized)) capabilities.add("database");
+  if (/(dependency|package|supply chain|lockfile)/.test(normalized)) capabilities.add("dependency-security");
+  if (/(agent|mcp|tool permission|delegat)/.test(normalized)) capabilities.add("agent-security");
+  if (/(research|compare|evaluate|investigate|source|literature)/.test(normalized)) capabilities.add("research");
+  if (/(brainstorm|ideas|ideate|options)/.test(normalized)) capabilities.add("ideation");
+  if (/(product|startup|market|user need|priorit)/.test(normalized)) capabilities.add("product-thinking");
+  if (/(architecture|system design|tradeoff|technology choice|tech stack)/.test(normalized)) capabilities.add("architecture");
+  if (/(test|qa|quality|regression|integration)/.test(normalized)) capabilities.add("qa");
+  if (/(code review|review this change|pull request)/.test(normalized)) capabilities.add("code-review");
+  if (/(requirement|acceptance criteria|specification)/.test(normalized)) capabilities.add("requirements");
   if (claimsToVerify.length) capabilities.add("claim-verification");
 
   return {
@@ -353,6 +368,31 @@ export function routeSkills(analysis: TaskAnalysis, availableSkillIds: string[])
   add("repo-explorer");
   add("planner");
   if (analysis.claimsToVerify.length || analysis.capabilities.includes("claim-verification") || analysis.capabilities.includes("security-review")) add("evidence-first");
+
+  const capabilityRoutes: Record<string, string[]> = {
+    "security-review": ["security-reviewer", "threat-model"],
+    authentication: ["auth-security"],
+    authorization: ["authorization-security"],
+    secrets: ["secrets-review"],
+    "input-validation": ["input-validation"],
+    "api-security": ["api-security"],
+    "prompt-injection": ["prompt-injection-review"],
+    "frontend": ["frontend-engineer", "ui-designer"],
+    "backend": ["backend-engineer", "fullstack-engineer"],
+    "database": ["database-architect"],
+    "dependency-security": ["dependency-security"],
+    "agent-security": ["agent-security"],
+    research: ["researcher"],
+    ideation: ["brainstorm"],
+    "product-thinking": ["product-engineer", "idea-validator", "feature-prioritizer"],
+    architecture: ["architecture-review", "tech-stack-selector"],
+    qa: ["qa-engineer", "regression-checker", "integration-verifier"],
+    "code-review": ["code-reviewer"],
+    requirements: ["requirements-checker"]
+  };
+  for (const capability of analysis.capabilities) for (const skill of capabilityRoutes[capability] ?? []) add(skill);
+  if (analysis.kind === "bug-fix") add("simplify");
+  if (analysis.kind === "feature" && analysis.capabilities.includes("frontend") && analysis.capabilities.includes("backend")) add("fullstack-engineer");
   if (analysis.kind !== "research") add("completion-checker");
   return selected;
 }
