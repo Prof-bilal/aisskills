@@ -1,0 +1,24 @@
+schema_version: 1
+id: planner
+name: Planner
+version: 0.1.0
+category: core
+description: Turn a request into a plan that separates facts, assumptions, and verification steps.
+capabilities:
+  - task-planning
+requires:
+  permissions:
+    - repository.read
+recommended_tools: []
+compatible_agents:
+  - codex
+  - claude
+  - opencode
+  - gemini
+dependencies:
+  skills:
+    - repo-explorer
+checks:
+  - assumptions
+  - success-criteria
+risk_level: low

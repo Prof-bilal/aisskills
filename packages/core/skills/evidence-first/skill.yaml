@@ -1,0 +1,25 @@
+schema_version: 1
+id: evidence-first
+name: Evidence First
+version: 0.1.0
+category: core
+description: Verify material claims against repository, test, runtime, and documentation evidence.
+capabilities:
+  - claim-verification
+  - evidence-recording
+requires:
+  permissions:
+    - repository.read
+recommended_tools: []
+compatible_agents:
+  - codex
+  - claude
+  - opencode
+  - gemini
+dependencies:
+  skills:
+    - repo-explorer
+checks:
+  - claim-state
+  - contradictory-evidence
+risk_level: low

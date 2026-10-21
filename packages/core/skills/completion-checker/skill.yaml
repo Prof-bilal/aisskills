@@ -1,0 +1,26 @@
+schema_version: 1
+id: completion-checker
+name: Completion Checker
+version: 0.1.0
+category: core
+description: Compare requested outcomes with implementation and verification evidence before reporting completion.
+capabilities:
+  - requirements-checking
+  - completion-reporting
+requires:
+  permissions:
+    - repository.read
+recommended_tools: []
+compatible_agents:
+  - codex
+  - claude
+  - opencode
+  - gemini
+dependencies:
+  skills:
+    - evidence-first
+    - planner
+checks:
+  - requirements
+  - verification-status
+risk_level: low

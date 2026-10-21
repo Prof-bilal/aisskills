@@ -1,0 +1,23 @@
+schema_version: 1
+id: repo-explorer
+name: Repository Explorer
+version: 0.1.0
+category: core
+description: Inspect repository structure, project files, and development tools.
+capabilities:
+  - repository-inspection
+requires:
+  permissions:
+    - repository.read
+recommended_tools: []
+compatible_agents:
+  - codex
+  - claude
+  - opencode
+  - gemini
+dependencies:
+  skills: []
+checks:
+  - project-files
+  - test-framework
+risk_level: low
