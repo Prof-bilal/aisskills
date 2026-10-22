@@ -43,6 +43,9 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+import { createLocalRuntime } from "./runtime.js";
+import { serveMcp } from "./mcp.js";
+
 const execFileAsync = promisify(execFile);
 
 const logger = createLogger();
@@ -61,6 +64,7 @@ Commands:
   packs      List and manage skill packs
   profile    Create or activate a user profile
   plan       Create a task plan
+  mcp        Serve AI Skills over MCP stdio
   run        Execute a task
   verify     Verify a task or claim
 
@@ -113,6 +117,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   if (command === "profile") return manageProfile(argv.slice(1));
   if (command === "verify") return verifyClaim(argv.slice(1));
   if (command === "plan") return createPlan(argv.slice(1));
+  if (command === "mcp") { await serveMcp(await createLocalRuntime(), detectAgents); return 0; }
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));
   if (command === "goals" || command === "goal") return manageGoals(command, argv.slice(1));
@@ -385,71 +390,12 @@ async function runTask(args: string[]): Promise<number> {
     logger.error(`Unknown agent "${parsed.agent}". Choose codex, claude, opencode, or gemini.`);
     return 2;
   }
-  const context = await detectProjectContext();
-  const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
-  const plan = createTaskPlan(task, context, registry.list().map((skill) => skill.id));
-  const config = await loadUserConfig();
-  const profile = config.profiles[config.activeProfile];
-  const configuredAgents = profile ? [...(profile.agents.primary ? [profile.agents.primary] : []), ...profile.agents.fallback] : [];
-  const selectedAgents = requestedAgent ? [requestedAgent] : configuredAgents;
-  const adapters = createBuiltInAdapters();
-
-  console.log(`Task: ${task}`);
-  console.log(`Workflow: ${plan.workflow}`);
-  console.log(`Skills: ${plan.selectedSkills.join(", ") || "none"}`);
-  console.log("\nLoading skills...");
-  for (const skillId of plan.selectedSkills) console.log(`  ✓ ${skillId}`);
-  console.log(`Skills loaded: ${plan.selectedSkills.length}`);
-  console.log(`Agents: ${selectedAgents.join(", ") || "none selected"}`);
-  if (requestedAgent) console.log(`Selection: explicit (${requestedAgent})`);
-  if (!selectedAgents.length) {
-    console.log("Status: BLOCKED");
-    console.log("Reason: no agent is configured in the active profile.");
-    return 1;
-  }
-
-  const unavailable: string[] = [];
-  for (const agentId of [...new Set(selectedAgents)]) {
-    const adapter = adapters.find((candidate) => candidate.id === agentId);
-    if (!adapter) {
-      unavailable.push(`${agentId}: adapter is not installed`);
-      continue;
-    }
-    const availability = await adapter.detect();
-    if (availability.status !== "available") {
-      unavailable.push(`${availability.name}: ${availability.reason ?? "not available"}`);
-      continue;
-    }
-    console.log(`\nAgent: ${availability.name}`);
-    console.log(`Starting terminal process: ${availability.executable ?? agentId}`);
-    console.log(`Working: ${availability.name} is processing your task...`);
-    let streamedOutput = false;
-    const result = await adapter.execute({
-      prompt: task,
-      workingDirectory: context.root,
-      readOnly: true,
-      permissions: [...SAFE_READ_PERMISSIONS],
-      onOutput: (chunk) => {
-        if (!streamedOutput) {
-          process.stdout.write(`\n--- ${availability.name} live output ---\n`);
-          streamedOutput = true;
-        }
-        process.stdout.write(chunk);
-      }
-    });
-    if (streamedOutput) {
-      if (!process.stdout.isTTY || !result.output?.endsWith("\n")) process.stdout.write("\n");
-      process.stdout.write(`--- End ${availability.name} output ---\n`);
-    }
-    console.log(`Status: ${result.status === "completed" ? "COMPLETE" : result.status === "unsupported" ? "NEEDS USER ACTION" : result.status.toUpperCase()}`);
-    console.log(`Execution: ${result.message}`);
-    console.log(`Permissions: ${result.permissions.join(", ") || "none"}`);
-    if (result.status === "completed") return 0;
-    unavailable.push(`${availability.name}: ${result.error ?? result.message}`);
-  }
-  console.log("Status: BLOCKED");
-  console.log(`Reason: all configured agents were unavailable or failed. ${unavailable.join(" | ")}`);
-  return 1;
+  const runtime = await createLocalRuntime(requestedAgent, chunk => process.stdout.write(chunk));
+  const result = await runtime.executeTask({ task });
+  console.log(`Status: ${result.status}`);
+  console.log(`Execution: ${result.summary}`);
+  console.log(`Skills: ${result.skills.join(", ")}`);
+  return ["COMPLETE", "IMPLEMENTED_BUT_UNVERIFIED"].includes(result.status) ? 0 : 1;
 }
 
 function parseRunArguments(args: string[]): { task: string; agent?: string } {
