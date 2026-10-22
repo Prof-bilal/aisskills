@@ -1081,3 +1081,4 @@ export async function loadLockfile(root = process.cwd()): Promise<AisSkillsLockf
 }
 
 export * from "./orchestration.js";
+export * from "./smurf.js";
