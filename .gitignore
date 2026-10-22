@@ -8,3 +8,6 @@ release/
 # Local AI Skills state should not be committed from a developer machine.
 .ai/
 
+
+# External integration sources and local run data
+.integration/
