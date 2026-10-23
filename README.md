@@ -6,7 +6,7 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-Release candidate `0.1.5` is prepared for npm. The repository builds and the test
+Release `0.1.6` is prepared for npm. The repository builds and the test
 suite passes.
 
 ## Requirements
@@ -158,7 +158,7 @@ After publication, verify the user-facing package in a clean directory:
 mkdir /tmp/aiskills-smoke
 cd /tmp/aiskills-smoke
 npm init -y
-npm install -g @prof-bilal/aiskills@0.1.5
+npm install -g @prof-bilal/aiskills@0.1.6
 aiskills --version
 aiskills skills list
 ```
@@ -167,7 +167,7 @@ The supporting packages use unscoped names so they can be published by the
 authenticated npm account without requiring an organization scope.
 
 For automated releases, add an `NPM_TOKEN` repository secret and push a
-version tag such as `v0.1.5`. The repository workflow runs the tests and
+version tag such as `v0.1.6`. The repository workflow runs the tests and
 publishes the packages in dependency order.
 
 ## Development checks

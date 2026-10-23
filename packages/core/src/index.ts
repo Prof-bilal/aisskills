@@ -220,7 +220,7 @@ export function createLogger(level: LogLevel = "info"): Logger {
 }
 
 export function getVersion(): string {
-  return "0.1.5";
+  return "0.1.6";
 }
 
 export type ClaimState = "VERIFIED" | "SUPPORTED" | "LIKELY" | "UNVERIFIED" | "CONTRADICTED" | "UNKNOWN";

@@ -23,7 +23,7 @@ for (const file of files) {
   if (pkg.name === "aiskills-workspace") continue;
   if (seen.has(pkg.name) || !expected.has(pkg.name)) throw new Error(`Unexpected or duplicate package: ${pkg.name}`);
   seen.add(pkg.name);
-  if (pkg.version !== "0.1.5") throw new Error(`${pkg.name} has version ${pkg.version}, expected 0.1.5`);
+  if (pkg.version !== "0.1.6") throw new Error(`${pkg.name} has version ${pkg.version}, expected 0.1.6`);
   if (pkg.engines?.node !== ">=20") throw new Error(`${pkg.name} must declare Node.js >=20`);
   const { stdout: listing } = await execFileAsync("tar", ["-tzf", archive]);
   if (listing.split("\n").some(entry => entry.includes(".integration/") || entry.includes("node_modules/"))) {
