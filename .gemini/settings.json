@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aiskills": {
+      "command": "aiskills",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}
