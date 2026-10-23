@@ -1,20 +1,30 @@
 {
   "name": "@prof-bilal/aiskills",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Local-first AI Skills Platform CLI",
   "type": "module",
   "license": "MIT",
-  "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "https://github.com/Prof-bilal/aisskills.git", "directory": "packages/cli" },
+  "engines": { "node": ">=20" },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Prof-bilal/aisskills.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "aiskills": "dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "aiskills-adapters-local": "workspace:*",
     "aiskills-core": "workspace:*"
   }

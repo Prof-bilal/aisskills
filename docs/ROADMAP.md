@@ -245,3 +245,32 @@ install → init → detect agents → choose packs → inspect project
 → verify claim → plan → execute → test → report evidence
 ```
 
+
+## Smurf integration migration
+
+Implemented: audit and license review; preserved upstream baseline; core engine
+contract and routing; native adapter; programmatic development Smurf adapter;
+MCP stdio server with eight tools; shared CLI runtime; skill/context passing;
+host authorization and exact check allowlists; normalized evidence/review;
+deterministic worktree, parallel, integration and injection fixtures.
+
+Remaining before production Smurf support:
+
+- Resolve upstream redistribution rights and vendor/package the permitted engine
+  with attribution, preserving relevant upstream tests.
+- Connect CLI/OpenHands worker isolation. API workers now use validated text edits
+  and bubblewrap-isolated verification.
+- Add automatic decomposition into scoped steps, evidence discovery and corrected
+  causal briefs, durable resume/cancel and explicit application of verified output.
+- Translate vault lessons and routing samples into AI Skills memory with confidence
+  and sample counts; add optional CodeAtlas/Graphify and provider capabilities.
+- Validate actual authentication feature work and adversarial real-provider runs.
+  Current parallel fixtures exercise scheduling with deterministic edits.
+
+Optional benchmarks and OpenHands remain opt-in future work. Do not release copied
+Smurf code while redistribution permission is unresolved.
+
+API follow-up: reuse upstream compatible-API transport and discovery; guard file
+block writes in core; isolate checks with bubblewrap; require host network grants
+and explicit model/pricing configuration. Protocol tests use a local HTTP fixture;
+no paid or authenticated external model run is claimed.

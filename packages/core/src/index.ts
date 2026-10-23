@@ -220,7 +220,7 @@ export function createLogger(level: LogLevel = "info"): Logger {
 }
 
 export function getVersion(): string {
-  return "0.1.0";
+  return "0.1.6";
 }
 
 export type ClaimState = "VERIFIED" | "SUPPORTED" | "LIKELY" | "UNVERIFIED" | "CONTRADICTED" | "UNKNOWN";
@@ -1079,3 +1079,6 @@ export async function loadLockfile(root = process.cwd()): Promise<AisSkillsLockf
     throw error;
   }
 }
+
+export * from "./orchestration.js";
+export * from "./smurf.js";

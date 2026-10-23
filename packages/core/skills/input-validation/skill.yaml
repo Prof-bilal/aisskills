@@ -10,6 +10,6 @@ requires:
 recommended_tools: []
 compatible_agents: [codex, claude, opencode, gemini]
 dependencies:
-  skills: [security-reviewer, api-security]
+  skills: [security-reviewer]
 checks: [boundary-validation, injection, parser-safety]
 risk_level: high

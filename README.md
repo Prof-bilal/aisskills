@@ -6,7 +6,7 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-Public release `0.1.4` is available on npm. The repository builds and the test
+Release `0.1.6` is prepared for npm. The repository builds and the test
 suite passes.
 
 ## Requirements
@@ -80,6 +80,20 @@ the real local provider process, streams its live output, and then prints the
 final status. State-changing operations remain subject to the permission
 policy.
 
+## MCP and orchestration
+
+Start the MCP stdio server with `aiskills mcp` from the target repository. It
+exposes project inspection, skill recommendations, planning, execution, claim and
+run verification, goal checks and agent discovery through the same core used by
+`aiskills run`. Native worker output remains unverified until independently checked.
+
+The Smurf bridge uses the local engine for isolated worktrees, parallel lanes,
+review and combined-branch checks. It supports deterministic development workers
+and host-configured OpenAI-compatible API models. API edits pass through exact
+file validation, and verification runs under Linux bubblewrap. CLI-based Smurf
+workers remain disabled until their process boundary is integrated. See [MCP setup](docs/MCP.md) and the
+[integration audit](docs/SMURF_INTEGRATION.md) for the precise supported scope.
+
 ## Built-in skills
 
 Skills are declarative YAML manifests in `packages/core/skills`. They are
@@ -144,7 +158,7 @@ After publication, verify the user-facing package in a clean directory:
 mkdir /tmp/aiskills-smoke
 cd /tmp/aiskills-smoke
 npm init -y
-npm install -g @prof-bilal/aiskills@0.1.4
+npm install -g @prof-bilal/aiskills@0.1.6
 aiskills --version
 aiskills skills list
 ```
@@ -153,7 +167,7 @@ The supporting packages use unscoped names so they can be published by the
 authenticated npm account without requiring an organization scope.
 
 For automated releases, add an `NPM_TOKEN` repository secret and push a
-version tag such as `v0.1.4`. The repository workflow runs the tests and
+version tag such as `v0.1.6`. The repository workflow runs the tests and
 publishes the packages in dependency order.
 
 ## Development checks

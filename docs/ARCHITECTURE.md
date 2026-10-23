@@ -126,3 +126,19 @@ foundation, configuration-path helpers, logging, and tests. Phase 2 added the
 skill registry. Phase 3 added local agent detection and adapter contracts.
 Agent task execution remains intentionally deferred until Phase 8.
 
+
+## MCP-first orchestration integration
+
+The CLI package now hosts the MCP stdio server (`aiskills mcp`). It and manual
+`aiskills run` use `CoreRuntime` in core, which retains AI Skills ownership of
+project facts, evidence, goals, skills and policy. Two implementations share the
+AI Skills `OrchestrationEngine` contract: native read-only execution and a
+programmatic Smurf bridge with deterministic and OpenAI-compatible API workers. The latter dynamically loads an explicit
+external checkout; no unlicensed upstream source is bundled. See
+[the orchestration contract](ORCHESTRATION.md), [MCP tools](MCP.md),
+[security boundaries](SECURITY.md) and [integration audit](SMURF_INTEGRATION.md).
+
+Flow: MCP/CLI → CoreRuntime → project/premise/goal/skill checks → execution plan →
+engine selection → native or Smurf → execution evidence → review → structured
+result. Smurf retains its graph scheduler and task worktrees internally. Optional
+context providers can replace built-in inspection. Heavy tools are not required.

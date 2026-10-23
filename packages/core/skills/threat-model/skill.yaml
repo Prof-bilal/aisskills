@@ -10,6 +10,6 @@ requires:
 recommended_tools: []
 compatible_agents: [codex, claude, opencode, gemini]
 dependencies:
-  skills: [repo-explorer, security-reviewer, devil-advocate]
+  skills: [repo-explorer, evidence-first, devil-advocate]
 checks: [assets, actors, boundaries, mitigations, residual-risk]
 risk_level: medium
