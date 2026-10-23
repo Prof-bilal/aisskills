@@ -1,12 +1,12 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { analyzeTask, assessGoalRelevance, CoreRuntime, createClaim, getBuiltInSkillsDirectory, loadProjectGoals, routeSkills, SkillRegistry } from 'aiskills-core';
+import { analyzeTask, assessGoalRelevance, CoreRuntime, createClaim, getBuiltInSkillsDirectory, getVersion, loadProjectGoals, routeSkills, SkillRegistry } from 'aiskills-core';
 import type { TaskRequest } from 'aiskills-core';
 
 const taskSchema = { type: 'object', properties: { task: { type: 'string', minLength: 1, maxLength: 32000 } }, required: ['task'], additionalProperties: false };
 export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<unknown> = async () => []) {
-  const server = new Server({ name: 'aiskills', version: '0.1.5' }, { capabilities: { tools: {} } });
+  const server = new Server({ name: 'aiskills', version: getVersion() }, { capabilities: { tools: {} } });
   const tools = [
     { name: 'inspect_project', description: 'Inspect the host-configured project', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
     ...['recommend_skills', 'plan_task', 'verify_claim', 'check_goal'].map(name => ({ name, description: name.replaceAll('_', ' '), inputSchema: taskSchema })),

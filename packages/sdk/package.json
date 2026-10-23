@@ -4,6 +4,7 @@
   "description": "SDK foundations for declarative AI Skills extensions",
   "type": "module",
   "license": "MIT",
+  "engines": { "node": ">=20" },
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "https://github.com/Prof-bilal/aisskills.git", "directory": "packages/sdk" },
   "exports": {

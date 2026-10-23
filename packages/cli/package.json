@@ -4,6 +4,7 @@
   "description": "Local-first AI Skills Platform CLI",
   "type": "module",
   "license": "MIT",
+  "engines": { "node": ">=20" },
   "publishConfig": {
     "access": "public"
   },
