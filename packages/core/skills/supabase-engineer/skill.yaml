@@ -1,0 +1,24 @@
+schema_version: 1
+id: supabase-engineer
+name: Supabase Engineer
+version: 0.1.0
+category: provider
+description: Build, review, and verify Supabase database, auth, storage, realtime, and Edge Function integrations using current project evidence.
+capabilities: [supabase, postgres, rls, provider-integration]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, database-architect, security-reviewer, evidence-first]
+checks: [provider-version, migrations, rls, tests]
+risk_level: high
+activation:
+  triggers: [supabase, rls, edge function]
+  negative_triggers: [firebase-only]
+context:
+  budget_tokens: 2500
+  load_references_on_demand: true
+provider:
+  name: supabase
+  version_policy: official-current

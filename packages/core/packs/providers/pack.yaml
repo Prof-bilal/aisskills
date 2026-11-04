@@ -1,0 +1,14 @@
+schema_version: 1
+id: providers
+name: Provider Integrations
+version: 0.1.0
+description: Conditional skills for Supabase, Firebase, Clerk, Stripe, and browser references.
+skills:
+  - supabase-engineer
+  - firebase-engineer
+  - clerk-engineer
+  - payments-engineer
+  - browser-reference
+dependencies:
+  packs:
+    - core

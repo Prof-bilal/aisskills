@@ -6,6 +6,7 @@ import { dirname, extname } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { parse as parseYaml } from "yaml";
+import { ensureProjectMemoryStore } from "./memory-store.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -341,6 +342,11 @@ export function analyzeTask(task: string): TaskAnalysis {
   if (/(database|schema|sql|mongo|postgres|query|migration)/.test(normalized)) capabilities.add("database");
   if (/(dependency|package|supply chain|lockfile)/.test(normalized)) capabilities.add("dependency-security");
   if (/(agent|mcp|tool permission|delegat)/.test(normalized)) capabilities.add("agent-security");
+  if (/(supabase|rls|edge function)/.test(normalized)) capabilities.add("supabase");
+  if (/(firebase|firestore|security rules)/.test(normalized)) capabilities.add("firebase");
+  if (/(clerk|organization auth)/.test(normalized)) capabilities.add("clerk");
+  if (/(stripe|payment|checkout|subscription|billing)/.test(normalized)) capabilities.add("payments");
+  if (/(reference url|design reference|browser|mobbin|refero|dribbble)/.test(normalized)) capabilities.add("browser-reference");
   if (/(research|compare|evaluate|investigate|source|literature)/.test(normalized)) capabilities.add("research");
   if (/(brainstorm|ideas|ideate|options)/.test(normalized)) capabilities.add("ideation");
   if (/(product|startup|market|user need|priorit)/.test(normalized)) capabilities.add("product-thinking");
@@ -382,6 +388,11 @@ export function routeSkills(analysis: TaskAnalysis, availableSkillIds: string[])
     "database": ["database-architect"],
     "dependency-security": ["dependency-security"],
     "agent-security": ["agent-security"],
+    supabase: ["supabase-engineer"],
+    firebase: ["firebase-engineer"],
+    clerk: ["clerk-engineer"],
+    payments: ["payments-engineer"],
+    "browser-reference": ["browser-reference"],
     research: ["researcher"],
     ideation: ["brainstorm"],
     "product-thinking": ["product-engineer", "idea-validator", "feature-prioritizer"],
@@ -665,18 +676,23 @@ export function createDecisionRecord(decision: Omit<DecisionRecord, "date"> & { 
 }
 
 export async function loadMemoryRecords(root = process.cwd()): Promise<MemoryRecord[]> {
-  try { return JSON.parse(await readFile(join(root, ".ai", "memory.json"), "utf8")) as MemoryRecord[]; }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
+  const store = await ensureProjectMemoryStore(root);
+  try { return store.listMemory() as MemoryRecord[]; } finally { store.close(); }
 }
 
 export async function saveMemoryRecords(records: MemoryRecord[], root = process.cwd()): Promise<void> {
-  const directory = join(root, ".ai");
-  await mkdir(directory, { recursive: true });
-  await writeFile(join(directory, "memory.json"), `${JSON.stringify(records, null, 2)}\n`, "utf8");
+  const store = await ensureProjectMemoryStore(root);
+  try {
+    const transaction = store.db.transaction(() => {
+      for (const record of records) store.appendMemory(record);
+    });
+    transaction();
+  } finally { store.close(); }
 }
 
 export async function appendMemoryRecord(record: MemoryRecord, root = process.cwd()): Promise<void> {
-  await saveMemoryRecords([...(await loadMemoryRecords(root)), record], root);
+  const store = await ensureProjectMemoryStore(root);
+  try { store.appendMemory(record); } finally { store.close(); }
 }
 
 export interface Retrospective {
@@ -740,6 +756,9 @@ export interface SkillManifest {
   };
   checks: string[];
   risk_level: SkillRiskLevel;
+  activation?: { triggers?: string[]; negative_triggers?: string[] };
+  context?: { budget_tokens?: number; load_references_on_demand?: boolean };
+  provider?: { name: string; version_policy?: string };
 }
 
 export interface SkillValidationResult {
@@ -791,6 +810,9 @@ export function validateSkillManifest(value: unknown): SkillValidationResult {
   if (!manifest.risk_level || !["low", "medium", "high"].includes(manifest.risk_level)) {
     errors.push("risk_level must be low, medium, or high");
   }
+  if (manifest.activation && (manifest.activation.triggers && (!Array.isArray(manifest.activation.triggers) || manifest.activation.triggers.some(item => typeof item !== "string")) || manifest.activation.negative_triggers && (!Array.isArray(manifest.activation.negative_triggers) || manifest.activation.negative_triggers.some(item => typeof item !== "string")))) errors.push("activation triggers must be arrays of strings");
+  if (manifest.context && (manifest.context.budget_tokens !== undefined && (!Number.isInteger(manifest.context.budget_tokens) || manifest.context.budget_tokens < 256 || manifest.context.budget_tokens > 100000) || manifest.context.load_references_on_demand !== undefined && typeof manifest.context.load_references_on_demand !== "boolean")) errors.push("context has invalid budget or reference-loading policy");
+  if (manifest.provider && (typeof manifest.provider.name !== "string" || !manifest.provider.name.trim())) errors.push("provider.name must be a non-empty string");
 
   return { valid: errors.length === 0, errors };
 }
@@ -1080,5 +1102,6 @@ export async function loadLockfile(root = process.cwd()): Promise<AisSkillsLockf
   }
 }
 
+export * from "./memory-store.js";
 export * from "./orchestration.js";
 export * from "./smurf.js";

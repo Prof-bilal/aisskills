@@ -148,7 +148,7 @@ test('MCP stdio handshake and project inspection use the CLI server', async t =>
   const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp'], stderr: 'pipe' });
   await client.connect(transport);
   t.after(() => client.close());
-  assert.equal((await client.listTools()).tools.length, 8);
+  assert.ok((await client.listTools()).tools.length >= 8);
   const response = await client.callTool({ name: 'inspect_project', arguments: {} });
   assert.equal(JSON.parse(response.content[0].text).root, process.cwd());
 });

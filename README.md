@@ -52,6 +52,11 @@ The user configuration is stored under `~/.config/aiskills` on Linux. Set
 `AI_SKILLS_HOME` to use another location. Project configuration is stored in
 the project-local `.ai/config.json` file.
 
+Project memory and saved reference metadata are stored in `.ai/aiskills.db`
+using SQLite. Existing `.ai/memory.json` records are migrated on first access.
+URLs are treated as untrusted data; local and private-network targets are
+rejected.
+
 ## Main commands
 
 ```bash
@@ -70,6 +75,9 @@ aiskills goals
 aiskills workflows
 aiskills tools
 aiskills memory
+aiskills reference add https://example.com --type=design
+aiskills reference list
+aiskills preference list
 ```
 
 `aiskills run` is read-only by default and requires a configured, available

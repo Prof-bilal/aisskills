@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { analyzeTask, assessGoalRelevance, CoreRuntime, createClaim, getBuiltInSkillsDirectory, getVersion, loadProjectGoals, routeSkills, SkillRegistry } from 'aiskills-core';
+import { analyzeTask, assessGoalRelevance, CoreRuntime, createClaim, getBuiltInSkillsDirectory, getVersion, loadProjectGoals, routeSkills, SkillRegistry, ensureProjectMemoryStore } from 'aiskills-core';
 import type { TaskRequest } from 'aiskills-core';
 
 const taskSchema = { type: 'object', properties: { task: { type: 'string', minLength: 1, maxLength: 32000 } }, required: ['task'], additionalProperties: false };
@@ -12,6 +12,9 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
     ...['recommend_skills', 'plan_task', 'verify_claim', 'check_goal'].map(name => ({ name, description: name.replaceAll('_', ' '), inputSchema: taskSchema })),
     { name: 'execute_task', description: 'Execute through AI Skills policy and engine routing', inputSchema: { ...taskSchema, properties: { ...taskSchema.properties, mode: { type: 'string', enum: ['auto', 'single', 'native', 'smurf'] }, steps: { type: 'array', maxItems: 32, items: { type: 'object', properties: { id: { type: 'string' }, brief: { type: 'string' }, files: { type: 'array', items: { type: 'string' } }, dependencies: { type: 'array', items: { type: 'string' } }, checks: { type: 'array', items: { type: 'string' } } }, required: ['id', 'brief', 'files', 'dependencies', 'checks'], additionalProperties: false } } } } },
     { name: 'verify_task', description: 'Return recorded evidence for a run in this session', inputSchema: { type: 'object', properties: { runId: { type: 'string' } }, required: ['runId'], additionalProperties: false } },
+    { name: 'save_reference', description: 'Save a permitted URL reference for later analysis', inputSchema: { type: 'object', properties: { url: { type: 'string', minLength: 1, maxLength: 4096 }, sourceType: { type: 'string', enum: ['design', 'backend', 'general'] } }, required: ['url'], additionalProperties: false } },
+    { name: 'list_references', description: 'List saved URL references for the host project', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+    { name: 'list_preferences', description: 'List candidate and promoted project preferences', inputSchema: { type: 'object', properties: { status: { type: 'string', enum: ['candidate', 'promoted', 'rejected'] } }, additionalProperties: false } },
     { name: 'list_agents', description: 'List detected agents', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }
   ];
   const results = new Map<string, unknown>();
@@ -44,6 +47,9 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
           data = await runtime.options.verifyClaim?.(claim, await runtime.inspectProject()) ?? claim; break;
         }
         case 'verify_task': if (typeof args.runId !== 'string' || !results.has(args.runId)) throw new Error('No recorded run in this session'); else data = results.get(args.runId); break;
+        case 'save_reference': { const store = await ensureProjectMemoryStore(runtime.options.projectRoot); try { data = store.addReference({ url: args.url as string, sourceType: args.sourceType as 'design' | 'backend' | 'general' | undefined }); } finally { store.close(); } break; }
+        case 'list_references': { const store = await ensureProjectMemoryStore(runtime.options.projectRoot); try { data = store.listReferences(); } finally { store.close(); } break; }
+        case 'list_preferences': { const store = await ensureProjectMemoryStore(runtime.options.projectRoot); try { data = store.listPreferenceSignals(runtime.options.projectRoot, args.status as 'candidate' | 'promoted' | 'rejected' | undefined); } finally { store.close(); } break; }
         case 'check_goal': data = (await loadProjectGoals((await runtime.inspectProject()).root)).map(g => assessGoalRelevance(args.task as string, g)); break;
         case 'list_agents': data = await listAgents(); break;
       }

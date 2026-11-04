@@ -18,6 +18,8 @@ import {
   createDecisionRecord,
   createRetrospective,
   loadMemoryRecords,
+  ensureProjectMemoryStore,
+  ensureUserMemoryStore,
   getBuiltInToolsDirectory,
   getBuiltInWorkflowsDirectory,
   ToolRegistry,
@@ -66,6 +68,8 @@ Commands:
   plan       Create a task plan
   mcp        Serve AI Skills over MCP stdio
   run        Execute a task
+  reference  Save and inspect URL references
+  preference Manage candidate and promoted preferences
   verify     Verify a task or claim
 
 Options:
@@ -124,6 +128,8 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   if (command === "workflows") return listWorkflows(argv.slice(1));
   if (command === "tools") return listTools();
   if (command === "memory") return manageMemory(argv.slice(1));
+  if (command === "reference") return manageReferences(argv.slice(1));
+  if (command === "preference" || command === "preferences") return managePreferences(argv.slice(1));
 
   logger.error(`Command not implemented yet: ${command}`);
   console.error("Run `aiskills --help` to see available commands.");
@@ -528,6 +534,63 @@ async function manageMemory(args: string[]): Promise<number> {
   }
   console.error("Usage: aiskills memory | aiskills memory decision <text>");
   return 2;
+}
+
+async function manageReferences(args: string[]): Promise<number> {
+  const scope: "user" | "project" = option(args, "scope") === "user" ? "user" : "project";
+  const store = scope === "user" ? await ensureUserMemoryStore(getConfigPaths().root) : await ensureProjectMemoryStore();
+  try {
+    if (!args[0] || args[0] === "list") {
+      console.log(JSON.stringify(store.listReferences(), null, 2));
+      return 0;
+    }
+    if (args[0] === "add") {
+      const url = args[1];
+      if (!url) { console.error("Usage: aiskills reference add <url> [--type=design|backend|general] [--scope=user|project]"); return 2; }
+      const reference = store.addReference({ url, scope, sourceType: (option(args.slice(2), "type") as "design" | "backend" | "general" | undefined) ?? "general" });
+      console.log(JSON.stringify(reference, null, 2));
+      return 0;
+    }
+    if (args[0] === "inspect") {
+      const reference = store.getReference(args[1] ?? "");
+      if (!reference) { logger.error("Reference not found"); return 2; }
+      console.log(JSON.stringify(reference, null, 2));
+      return 0;
+    }
+    if (args[0] === "search") {
+      const query = args.slice(1).join(" ").trim();
+      if (!query) { console.error("Usage: aiskills reference search <query>"); return 2; }
+      console.log(JSON.stringify(store.searchReferences(query), null, 2));
+      return 0;
+    }
+    console.error("Usage: aiskills reference add <url> | aiskills reference list | aiskills reference search <query> | aiskills reference inspect <id>");
+    return 2;
+  } finally { store.close(); }
+}
+
+async function managePreferences(args: string[]): Promise<number> {
+  const store = await ensureProjectMemoryStore();
+  try {
+    if (!args[0] || args[0] === "list") {
+      console.log(JSON.stringify(store.listPreferenceSignals(process.cwd()), null, 2));
+      return 0;
+    }
+    if (args[0] === "add") {
+      const category = args[1];
+      const signal = args.slice(2).join(" ").trim();
+      if (!category || !signal) { console.error("Usage: aiskills preference add <category> <signal>"); return 2; }
+      console.log(JSON.stringify(store.addPreferenceSignal({ projectId: process.cwd(), category, signal, source: "explicit-user", confidence: 1 }), null, 2));
+      return 0;
+    }
+    if (args[0] === "confirm" || args[0] === "reject") {
+      if (!args[1]) { console.error(`Usage: aiskills preference ${args[0]} <id>`); return 2; }
+      store.setPreferenceStatus(args[1], args[0] === "confirm" ? "promoted" : "rejected");
+      console.log(`Preference ${args[0]}ed: ${args[1]}`);
+      return 0;
+    }
+    console.error("Usage: aiskills preference list | add <category> <signal> | confirm <id> | reject <id>");
+    return 2;
+  } finally { store.close(); }
 }
 
 const invokedPath = process.argv[1];

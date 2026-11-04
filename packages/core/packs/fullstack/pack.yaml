@@ -15,6 +15,7 @@ skills:
   - fullstack-engineer
   - database-architect
   - ui-designer
+  - browser-reference
 dependencies:
   packs:
     - core
