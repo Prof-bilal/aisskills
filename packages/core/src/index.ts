@@ -221,7 +221,7 @@ export function createLogger(level: LogLevel = "info"): Logger {
 }
 
 export function getVersion(): string {
-  return "0.1.6";
+  return "0.2.0-beta.1";
 }
 
 export type ClaimState = "VERIFIED" | "SUPPORTED" | "LIKELY" | "UNVERIFIED" | "CONTRADICTED" | "UNKNOWN";
@@ -739,6 +739,7 @@ export const VALID_PERMISSIONS = new Set([
 export type SkillRiskLevel = "low" | "medium" | "high";
 
 export interface SkillManifest {
+  instructions?: string;
   schema_version: number;
   id: string;
   name: string;
@@ -1072,7 +1073,8 @@ export interface LockedPackage {
 }
 
 export interface AisSkillsLockfile {
-  schema_version: 1;
+  schema_version: 1 | 2;
+  installed_packages?: Record<string, unknown>;
   skills: Record<string, LockedPackage>;
   packs: Record<string, LockedPackage>;
 }
@@ -1094,7 +1096,7 @@ export async function saveLockfile(lockfile: AisSkillsLockfile, root = process.c
 export async function loadLockfile(root = process.cwd()): Promise<AisSkillsLockfile | null> {
   try {
     const lockfile = JSON.parse(await readFile(join(root, "aiskills.lock"), "utf8")) as AisSkillsLockfile;
-    if (lockfile.schema_version !== 1 || !lockfile.skills || !lockfile.packs) throw new Error("invalid lock file schema");
+    if (![1,2].includes(lockfile.schema_version) || !lockfile.skills || !lockfile.packs) throw new Error("invalid lock file schema");
     return lockfile;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
@@ -1103,5 +1105,11 @@ export async function loadLockfile(root = process.cwd()): Promise<AisSkillsLockf
 }
 
 export * from "./memory-store.js";
+export * from "./packages.js";
+export * from "./capabilities.js";
+export * from "./routing.js";
+export * from "./reference-fetch.js";
+export * from "./plugin-bundle.js";
+export * from "./browser-reference.js";
 export * from "./orchestration.js";
 export * from "./smurf.js";

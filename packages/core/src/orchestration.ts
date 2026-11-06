@@ -3,6 +3,24 @@ import { realpath, readFile, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { analyzeTask, assessGoalRelevance, createClaim, createTaskPlan, detectProjectContext, getBuiltInSkillsDirectory, loadProjectGoals, scanUntrustedContent, SkillRegistry } from './index.js';
 import type { Claim, ProjectContext, SkillManifest } from './index.js';
+import { openPackageCatalog, planPackageActivation } from './packages.js';
+
+async function taskRegistry(project: string, task: string) {
+  const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
+  const catalog = await openPackageCatalog();
+  try {
+    const activation = await planPackageActivation(catalog, project, task);
+    for (const id of activation.selectedPackages) {
+      const p = catalog.get(id);
+      if(p.kind!=='declarative-skill') continue;
+      if (registry.get(id)) throw new Error(`Installed skill conflicts with built-in ID: ${id}`);
+      const instructions = await readFile(resolve(p.directory, 'SKILL.md'), 'utf8').catch(() => '');
+      if(instructions.length>Math.min(p.manifest.context?.budget_tokens??5000,8000)*4) throw new Error(`Skill instructions exceed context budget: ${id}`);
+      registry.add({...p.manifest, instructions});
+    }
+    return {registry, selected: activation.selectedPackages.filter(id=>catalog.get(id).kind==='declarative-skill')};
+  } finally { catalog.close(); }
+}
 
 export type RunStatus = 'COMPLETE' | 'PARTIALLY_VERIFIED' | 'IMPLEMENTED_BUT_UNVERIFIED' | 'BLOCKED' | 'FAILED' | 'NEEDS_USER_ACTION';
 export interface ExecutionStep { id: string; brief: string; files: string[]; dependencies: string[]; checks: string[] }
@@ -54,8 +72,9 @@ export class CoreRuntime {
     if (!request || typeof request.task !== 'string' || !request.task.trim() || request.task.length > 32000) throw new Error('A task of 1–32000 characters is required');
     if (request.mode && !['auto', 'single', 'native', 'smurf'].includes(request.mode)) throw new Error('Invalid orchestration mode');
     const project = await this.inspectProject();
-    const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
+    const {registry, selected} = await taskRegistry(project.root, request.task);
     const base = createTaskPlan(request.task, project, registry.list().map(s => s.id));
+    base.selectedSkills = [...new Set([...base.selectedSkills, ...selected])];
     const steps = request.steps ?? [];
     if (!Array.isArray(steps) || steps.length > 32) throw new Error('At most 32 steps are supported');
     const ids = new Set<string>();
@@ -83,7 +102,7 @@ export class CoreRuntime {
   async executeTask(request: TaskRequest): Promise<ExecutionResult> {
     const plan = await this.planTask(request);
     const project = await this.inspectProject();
-    const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
+    const {registry} = await taskRegistry(project.root, request.task);
     const context: ExecutionContext = { project, skills: registry.resolve(plan.skills), permissions: this.options.permissions ?? ['repository.read'] };
     const analysis = analyzeTask(plan.task);
     for (const text of analysis.claimsToVerify) {

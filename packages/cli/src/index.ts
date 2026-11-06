@@ -47,6 +47,12 @@ import { promisify } from "node:util";
 
 import { createLocalRuntime } from "./runtime.js";
 import { serveMcp } from "./mcp.js";
+import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActivation, writePackageLock, updateSkillPackage,resetProjectLock,packageRecoveryReport } from 'aiskills-core';
+import { prepareCapability, capabilityLaunch } from 'aiskills-core';
+import { spawn } from 'node:child_process';
+import { prepareAgentSession, runAgentSession } from './session.js';
+import { collectDiagnostics } from './doctor.js';
+import { acquireReference,captureBrowserReference } from 'aiskills-core';
 
 const execFileAsync = promisify(execFile);
 
@@ -63,11 +69,19 @@ Commands:
   doctor     Check the local runtime and configuration
   agents     List detected AI agents
   skills     List and manage skills
+             add <local-path> | install <github-url> [--ref=value] [--path=value]
+             inspect|review|enable|disable|remove|verify|history <id> [--yes]
+             update <id> [--ref=value] [--dry-run]
+             rollback <id> --digest=value
+             prepare <id> [--entry=name] [--yes] | connect <id> [--entry=name]
+             pin|unpin <id> | metrics
+             sync-lock [--reset] | recover
   packs      List and manage skill packs
   profile    Create or activate a user profile
   plan       Create a task plan
   mcp        Serve AI Skills over MCP stdio
   run        Execute a task
+  session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write]
   reference  Save and inspect URL references
   preference Manage candidate and promoted preferences
   verify     Verify a task or claim
@@ -81,6 +95,14 @@ Options:
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   const [command] = argv;
+  if(command==='session') {
+    const agent=option(argv,'agent')??'codex';
+    if(agent!=='codex'&&agent!=='claude') {logger.error('Session agent must be codex or claude');return 2;}
+    const task=argv.slice(1).filter(a=>!a.startsWith('--')).join(' ');
+    const options={agent,task,project:process.cwd(),cliPath:fileURLToPath(import.meta.url),print:argv.includes('--print'),write:argv.includes('--write')} as const;
+    try {if(argv.includes('--dry-run')) {const session=await prepareAgentSession(options);try{console.log(JSON.stringify({command:session.command,selected:session.selected,disabledMcp:session.disabledMcp,disabledPlugins:session.disabledPlugins,beforeHooks:session.before.length,afterHooks:session.after.length},null,2));}finally{await session.cleanup();}return 0;}return await runAgentSession(options);}catch(error){logger.error(error instanceof Error?error.message:String(error));return 1;}
+  }
+  if (command === 'add' || command === 'install') return manageInstalledSkills([command, ...argv.slice(1)]);
 
   if (!command || command === "--help" || command === "-h" || command === "help") {
     console.log(renderHelp());
@@ -93,19 +115,14 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   }
 
   if (command === "doctor") {
-    const paths = getConfigPaths();
-    const config = await loadUserConfig(paths);
-    console.log("AI Skills Doctor\n");
-    console.log("Core Runtime        PASS");
-    console.log(`Configuration      READY (${paths.root})`);
-    console.log(`Active Profile      ${config.activeProfile}`);
-    console.log("Skill Registry      NOT INITIALIZED");
-    console.log("Agent Adapters      NOT INITIALIZED");
-    console.log("\nPhase 1 foundation is installed. Full diagnostics arrive in later phases.");
-    return 0;
+    const checks=await collectDiagnostics();
+    if(argv.includes('--json'))console.log(JSON.stringify(checks,null,2));
+    else {console.log('AI Skills Doctor\n');for(const c of checks)console.log(`${c.status} ${c.name}: ${c.detail}`);}
+    return checks.some(c=>c.status==='FAIL')?1:0;
   }
 
   if (command === "skills") {
+    if (argv[1] && argv[1] !== 'list') return manageInstalledSkills(argv.slice(1));
     if (argv[1] && argv[1] !== "list") {
       logger.error(`Skill command not implemented yet: ${argv[1]}`);
       return 2;
@@ -121,7 +138,13 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   if (command === "profile") return manageProfile(argv.slice(1));
   if (command === "verify") return verifyClaim(argv.slice(1));
   if (command === "plan") return createPlan(argv.slice(1));
-  if (command === "mcp") { await serveMcp(await createLocalRuntime(), detectAgents); return 0; }
+  if (command === "mcp") {
+    const agent=option(argv,'session-agent');
+    if(agent!==undefined&&agent!=='codex'&&agent!=='claude'){logger.error('Session agent must be codex or claude');return 2;}
+    const allow=argv.includes('--allow-capability-execution'),deny=argv.includes('--deny-capability-execution');
+    if(allow&&deny){logger.error('Conflicting capability execution options');return 2;}
+    await serveMcp(await createLocalRuntime(), detectAgents, {compact:argv.includes('--compact'),agent,...(allow||deny?{allowExecution:allow}:{})}); return 0;
+  }
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));
   if (command === "goals" || command === "goal") return manageGoals(command, argv.slice(1));
@@ -141,11 +164,47 @@ async function listSkills(): Promise<number> {
     const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
     console.log("Built-in skills\n");
     for (const skill of registry.list()) console.log(`${skill.id}  ${skill.version}  ${skill.description}`);
+    const catalog = await openPackageCatalog();
+    try { for (const p of catalog.list()) console.log(`${p.id}  ${p.manifest.version}  ${p.status}  ${p.kind}`); } finally { catalog.close(); }
     return 0;
   } catch (error: unknown) {
     logger.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+async function manageInstalledSkills(args: string[]): Promise<number> {
+  const catalog = await openPackageCatalog();
+  try {
+    const [action, id] = args;
+    if(action==='metrics'){console.log(JSON.stringify(await catalog.telemetry(process.cwd()),null,2));return 0;}
+    if(action==='recover'){console.log(JSON.stringify(await packageRecoveryReport(catalog),null,2));return 0;}
+    if(action==='sync-lock'){if(args.slice(1).some(a=>a!=='--reset'))throw new Error('Usage: aiskills skills sync-lock [--reset]');if(args.includes('--reset'))console.log(JSON.stringify({backup:await resetProjectLock(catalog,process.cwd())}));else await writePackageLock(catalog,process.cwd());console.log('Project lock synchronized from reviewed catalog state.');return 0;}
+    const allowedFlags = action==='add'||action==='install' ? ['--ref=','--path=','--yes','--dry-run'] : action==='update' ? ['--ref=','--dry-run'] : action==='rollback' ? ['--digest='] : action==='prepare'?['--entry=','--tools=','--executable=','--hosts=','--yes']:action==='connect'?['--entry=']:['--yes'];
+    for(const flag of args.slice(2)) if(!allowedFlags.some(f=>f.endsWith('=')?flag.startsWith(f):flag===f)) throw new Error(`Unsupported option: ${flag}`);
+    if (!id) throw new Error('Usage: aiskills skills add|install <source> or inspect|review|enable|disable|remove|verify <id>');
+    if (action === 'add' || action === 'install') {
+      const result = await installSkillPackage(catalog, {source:id,remote:action==='install',ref:option(args,'ref'),subdirectory:option(args,'path'),approve:args.includes('--yes'),dryRun:args.includes('--dry-run')});
+      console.log(JSON.stringify(result,null,2));
+      if(!args.includes('--dry-run') && result.status==='review-required') console.log(`Review with: aiskills skills review ${result.id} --yes; then enable with: aiskills skills enable ${result.id}`);
+    } else if (action === 'enable' || action === 'disable') { await catalog.enable(id,process.cwd(),action==='enable'); await writePackageLock(catalog,process.cwd()); console.log(`${action}: ${id}`); }
+    else if(action==='remove') { catalog.remove(id); await writePackageLock(catalog,process.cwd()); console.log(`Removed catalog registration: ${id}; content retained for recovery.`); }
+    else if(action==='update') { console.log(JSON.stringify(await updateSkillPackage(catalog,id,{ref:option(args,'ref'),dryRun:args.includes('--dry-run')}),null,2)); if(!args.includes('--dry-run')) await writePackageLock(catalog,process.cwd()); }
+    else if(action==='history') console.log(JSON.stringify(catalog.history(id),null,2));
+    else if(action==='pin'||action==='unpin'){await catalog.pin(id,process.cwd(),action==='pin');console.log(`${action}: ${id}`);}
+    else if(action==='prepare') console.log(JSON.stringify(await prepareCapability(catalog,id,args.includes('--yes'),option(args,'entry'),{tools:splitOption(args,'tools'),executable:option(args,'executable'),hosts:splitOption(args,'hosts')}),null,2));
+    else if(action==='connect') {
+      const launch=await capabilityLaunch(catalog,id,option(args,'entry'));
+      return await new Promise<number>((resolve,reject)=>{const child=spawn(launch.command,launch.args,{stdio:'inherit'});child.once('error',reject);child.once('exit',code=>resolve(code??1));});
+    }
+    else if(action==='rollback') { const digest=option(args,'digest'); if(!digest) throw new Error('--digest is required'); await catalog.rollback(id,digest); await writePackageLock(catalog,process.cwd()); console.log('Rolled back; review and enable again before use.'); }
+    else if(action==='inspect' || action==='review' || action==='verify') {
+      const p=catalog.get(id); await verifyPackage(p);
+      if(action==='review' && args.includes('--yes')) { if(p.findings.some(f=>f.severity==='high'||f.severity==='blocker')) throw new Error('Remediate high-risk findings before approval'); p.status='approved'; catalog.save(p); }
+      console.log(JSON.stringify(p,null,2));
+    } else throw new Error(`Unsupported skill command: ${action}`);
+    return 0;
+  } catch(error) { logger.error(error instanceof Error?error.message:String(error)); return 1; } finally { catalog.close(); }
 }
 
 async function listAgents(): Promise<number> {
@@ -343,6 +402,8 @@ async function createPlan(args: string[]): Promise<number> {
   const context = await detectProjectContext();
   const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
   const plan = createTaskPlan(task, context, registry.list().map((skill) => skill.id));
+  const catalog = await openPackageCatalog();
+  try { const activation = await planPackageActivation(catalog, context.root, task); plan.selectedSkills = [...new Set([...plan.selectedSkills,...activation.selectedPackages])]; console.log(JSON.stringify({activation},null,2)); } finally { catalog.close(); }
   console.log(JSON.stringify(plan, null, 2));
   return 0;
 }
@@ -554,9 +615,11 @@ async function manageReferences(args: string[]): Promise<number> {
     if (args[0] === "inspect") {
       const reference = store.getReference(args[1] ?? "");
       if (!reference) { logger.error("Reference not found"); return 2; }
-      console.log(JSON.stringify(reference, null, 2));
+      console.log(JSON.stringify({reference,artifacts:store.referenceArtifacts(reference.id)}, null, 2));
       return 0;
     }
+    if(args[0]==='fetch') {if(!args[1])throw new Error('Usage: aiskills reference fetch <id>');console.log(JSON.stringify(await acquireReference(store,args[1]),null,2));return 0;}
+    if(args[0]==='capture') {if(!args[1])throw new Error('Usage: aiskills reference capture <id> [--asset-hosts=cdn.example.com]');console.log(JSON.stringify(await captureBrowserReference(store,args[1],splitOption(args,'asset-hosts')??[]),null,2));return 0;}
     if (args[0] === "search") {
       const query = args.slice(1).join(" ").trim();
       if (!query) { console.error("Usage: aiskills reference search <query>"); return 2; }

@@ -1,16 +1,17 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
-const release = join(root, "release");
+const version = JSON.parse(await readFile(join(root,'package.json'),'utf8')).version;
+const release = process.argv[2] ?? join(root, "release");
 const expected = new Map([
-  ["aiskills-core", ["package/dist/index.js", "package/skills/"]],
+  ["aiskills-core", ["package/dist/index.js", "package/dist/packages.js", "package/dist/capabilities.js", "package/dist/routing.js", "package/dist/browser-worker.js", "package/dist/browser-reference.js", "package/skills/"]],
   ["aiskills-adapters-local", ["package/dist/index.js"]],
   ["aiskills-sdk", ["package/dist/index.js"]],
-  ["@prof-bilal/aiskills", ["package/dist/index.js"]]
+  ["@prof-bilal/aiskills", ["package/dist/index.js", "package/dist/session.js", "package/dist/doctor.js", "package/dist/capability-broker.js"]]
 ]);
 const files = (await readdir(release)).filter(file => file.endsWith(".tgz"));
 if (files.length < expected.size) throw new Error(`Expected at least ${expected.size} release tarballs, found ${files.length}`);
@@ -23,7 +24,7 @@ for (const file of files) {
   if (pkg.name === "aiskills-workspace") continue;
   if (seen.has(pkg.name) || !expected.has(pkg.name)) throw new Error(`Unexpected or duplicate package: ${pkg.name}`);
   seen.add(pkg.name);
-  if (pkg.version !== "0.1.6") throw new Error(`${pkg.name} has version ${pkg.version}, expected 0.1.6`);
+  if (pkg.version !== version) throw new Error(`${pkg.name} has version ${pkg.version}, expected ${version}`);
   if (pkg.engines?.node !== ">=20") throw new Error(`${pkg.name} must declare Node.js >=20`);
   const { stdout: listing } = await execFileAsync("tar", ["-tzf", archive]);
   if (listing.split("\n").some(entry => entry.includes(".integration/") || entry.includes("node_modules/"))) {

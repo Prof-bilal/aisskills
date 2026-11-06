@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, lstat } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash,randomUUID } from "node:crypto";
 
 export type MemoryCategory = "preference" | "verified-fact" | "decision" | "observation" | "candidate-learning";
 export type MemoryScope = "project" | "user";
@@ -117,6 +117,7 @@ export function canonicalizeReferenceUrl(raw: string): URL {
   let parsed: URL;
   try { parsed = new URL(raw); } catch { throw new Error("Reference URL must be a valid absolute URL"); }
   if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error("Reference URL must use http or https");
+  if(parsed.username||parsed.password)throw new Error('Reference URL cannot contain credentials');
   const host = parsed.hostname.toLowerCase();
   if (host === 'localhost' || host.endsWith('.localhost') || host === 'metadata.google.internal' || /^127\.|^10\.|^192\.168\.|^169\.254\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) {
     throw new Error("Reference URL cannot target local or private network addresses");
@@ -134,7 +135,7 @@ export class MemoryStore {
   private readonly scope: MemoryScope;
   private readonly scopeId: string;
 
-  constructor(path: string, scope: MemoryScope = "project", scopeId = path) {
+  constructor(readonly path: string, scope: MemoryScope = "project", scopeId = path) {
     this.scope = scope;
     this.scopeId = scopeId;
     this.db = new Database(path);
@@ -188,13 +189,28 @@ export class MemoryStore {
   }
 
   getReference(referenceId: string): StoredReference | null {
-    const row = this.db.prepare("SELECT id, url, canonical_url, scope, scope_id, source_type, title, status, created_at, last_seen_at FROM \"references\" WHERE id = ?").get(referenceId) as Record<string, string> | undefined;
+    const row = this.db.prepare("SELECT id, url, canonical_url, scope, scope_id, source_type, title, status, created_at, last_seen_at FROM \"references\" WHERE id = ? AND scope = ? AND scope_id = ?").get(referenceId,this.scope,this.scopeId) as Record<string, string> | undefined;
     return row ? { id: row.id, url: row.url, canonicalUrl: row.canonical_url, scope: row.scope as MemoryScope, scopeId: row.scope_id, sourceType: row.source_type, title: row.title ?? null, status: row.status, createdAt: row.created_at, lastSeenAt: row.last_seen_at } : null;
   }
 
   listReferences(scope = this.scope, scopeId = this.scopeId): StoredReference[] {
     const rows = this.db.prepare("SELECT id FROM \"references\" WHERE scope = ? AND scope_id = ? ORDER BY last_seen_at DESC").all(scope, scopeId) as Array<{ id: string }>;
     return rows.map(row => this.getReference(row.id)!).filter(Boolean);
+  }
+  setReferenceStatus(referenceId:string,status:'acquired'|'review-required'|'failed'):void {
+    if(!this.getReference(referenceId))throw new Error('Reference not found in current scope');
+    this.db.prepare('UPDATE "references" SET status=? WHERE id=?').run(status,referenceId);
+  }
+  saveReferenceArtifact(referenceId:string,artifact:{contentHash:string;title:string;screenshotPath?:string},status:'acquired'|'review-required'):void {
+    if(!this.getReference(referenceId))throw new Error('Reference not found in current scope');
+    this.db.transaction(()=>{
+      this.db.prepare('INSERT INTO reference_artifacts (id,reference_id,artifact_type,extracted_json,created_at) VALUES (?,?,?,?,?)').run(`artifact-${randomUUID()}`,referenceId,artifact.screenshotPath?'browser-capture':'html-extraction',JSON.stringify(artifact),now());
+      this.db.prepare('UPDATE "references" SET content_hash=?,title=?,status=? WHERE id=?').run(artifact.contentHash,artifact.title,status,referenceId);
+    })();
+  }
+  referenceArtifacts(referenceId:string):unknown[] {
+    if(!this.getReference(referenceId))throw new Error('Reference not found in current scope');
+    return (this.db.prepare('SELECT extracted_json FROM reference_artifacts WHERE reference_id=? ORDER BY created_at DESC LIMIT 5').all(referenceId) as {extracted_json:string}[]).map(row=>JSON.parse(row.extracted_json));
   }
 
   searchReferences(query: string, scope = this.scope, scopeId = this.scopeId): StoredReference[] {
@@ -224,7 +240,10 @@ export function openProjectMemoryStore(root = process.cwd()): MemoryStore {
 }
 
 export async function ensureProjectMemoryStore(root = process.cwd()): Promise<MemoryStore> {
-  await mkdir(dirname(databasePath(root, "project")), { recursive: true });
+  const file=databasePath(root,'project');const directory=dirname(file);
+  await mkdir(directory, { recursive: true });
+  if((await lstat(directory)).isSymbolicLink())throw new Error('Project memory directory must not be a symlink');
+  try{if((await lstat(file)).isSymbolicLink())throw new Error('Project memory database must not be a symlink');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
   const store = openProjectMemoryStore(root);
   await store.migrateLegacyMemory(root);
   return store;
@@ -233,4 +252,17 @@ export async function ensureProjectMemoryStore(root = process.cwd()): Promise<Me
 export async function ensureUserMemoryStore(root: string): Promise<MemoryStore> {
   await mkdir(root, { recursive: true });
   return new MemoryStore(databasePath(root, "user"), "user", root);
+}
+
+/** Only explicit, confirmed preferences influence prompts; inferred signals remain candidates. */
+export async function confirmedPreferenceContext(root:string,task:string):Promise<Array<{id:string;category:string;signal:string}>> {
+  const path=databasePath(root);try{if((await lstat(dirname(path))).isSymbolicLink())throw new Error('Preference directory must not be a symlink');const st=await lstat(path);if(!st.isFile()||st.isSymbolicLink())throw new Error('Preference database must be a regular file');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return [];throw error;}
+  const store=openProjectMemoryStore(root);
+  try {
+    const words=new Set(task.toLowerCase().split(/\W+/));
+    const ui=['ui','frontend','design','layout','css','component','components'].some(w=>words.has(w));
+    const backend=['backend','database','auth','authentication','server','api'].some(w=>words.has(w));
+    let size=0;
+    return store.listPreferenceSignals(root,'promoted').filter(p=>p.source==='explicit-user'&&(p.category==='general'||words.has(p.category.toLowerCase())||(ui&&['style','design','frontend','ui'].includes(p.category))||(backend&&['backend','database','auth'].includes(p.category)))).slice(0,8).filter(p=>{size+=p.signal.length;return p.signal.length<=1000&&size<=4000;}).map(({id,category,signal})=>({id,category,signal}));
+  }finally{store.close();}
 }
