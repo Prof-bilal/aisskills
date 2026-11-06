@@ -1,0 +1,14 @@
+schema_version: 1
+id: security-mcp
+name: MCP Security
+version: 0.1.0
+description: Security controls for browser, MCP, provider, and agent tool integrations.
+skills:
+  - agent-security
+  - prompt-injection-review
+  - secrets-review
+  - threat-model
+  - api-security
+dependencies:
+  packs:
+    - security

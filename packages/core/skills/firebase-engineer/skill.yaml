@@ -1,0 +1,23 @@
+schema_version: 1
+id: firebase-engineer
+name: Firebase Engineer
+version: 0.1.0
+category: provider
+description: Build and verify Firebase Authentication, Firestore, Hosting, and Security Rules integrations with current project configuration.
+capabilities: [firebase, firestore, provider-integration]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, database-architect, auth-security, evidence-first]
+checks: [provider-version, security-rules, auth, tests]
+risk_level: high
+activation:
+  triggers: [firebase, firestore, security rules]
+context:
+  budget_tokens: 2500
+  load_references_on_demand: true
+provider:
+  name: firebase
+  version_policy: official-current

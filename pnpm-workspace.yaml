@@ -1,6 +1,8 @@
 packages:
   - packages/*
   - packages/adapters/*
+allowBuilds:
+  better-sqlite3: true
 minimumReleaseAgeExclude:
   - aiskills-adapters-local@0.1.0
   - aiskills-core@0.1.0

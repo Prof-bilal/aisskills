@@ -6,8 +6,51 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-Release `0.1.6` is prepared for npm. The repository builds and the test
-suite passes.
+`0.2.0-beta.1` is release-ready on the `beta` channel. The packages are built,
+tested, audited, and verified as clean installable archives. Public npm
+publication is the final external step and requires an authenticated npm
+publisher account.
+
+## The theory
+
+AI agents should not receive every installed skill, plugin, or MCP tool at the
+start of every task. Large always-on catalogs waste context, increase tool
+selection noise, slow startup, and make unrelated integrations part of the
+agent's trust surface. AI Skills treats the user's catalog as a capability
+store, then selects only relevant declarative guidance and exposes executable
+tools through a small discovery gateway when the task needs them.
+
+The runtime follows this flow:
+
+1. The user adds a local skill with `aiskills add ./path` or a GitHub source with
+   `aiskills install owner/repository --path=skills/example`.
+2. AI Skills snapshots and scans the source without running its code. The user
+   reviews and approves it, enables it for a project, and receives a lockfile
+   containing content and runtime-policy hashes.
+3. A task router matches the task, project provider evidence, agent
+   compatibility, dependencies, pins, and budget. Only matching instructions
+   enter the initial context.
+4. The session exposes compact metadata tools. `discover_capabilities` and
+   `load_skill` are available immediately; `search_tools` starts only matching
+   approved MCP gateways, and `call_capability` opens a Warden-protected
+   connection only for the requested call.
+5. Every executable call rechecks project activation, snapshot integrity,
+   compatibility, reviewed policy hashes, and Warden enforcement. Tool schemas
+   and results are bounded and treated as untrusted data.
+
+This is progressive disclosure, not automatic permission granting. Installed
+skills stay inactive until project enablement, executable runtimes require a
+separate Warden review, read-only sessions cannot start executable gateways,
+and a task or tool result cannot approve a package or permission. The result is
+less initial context while retaining an explicit path to stronger capabilities
+when the work actually requires them. See [launch readiness](docs/LAUNCH_READINESS.md)
+for measured checks and known limits.
+
+The same catalog stores bounded HTTPS reference evidence in SQLite. Design,
+backend, and product references can be fetched or rendered through the guarded
+browser flow, then explicit user preferences can influence future routing.
+External pages and inferred observations remain untrusted candidate data and
+cannot grant access.
 
 ## Requirements
 
@@ -52,6 +95,11 @@ The user configuration is stored under `~/.config/aiskills` on Linux. Set
 `AI_SKILLS_HOME` to use another location. Project configuration is stored in
 the project-local `.ai/config.json` file.
 
+Project memory and saved reference metadata are stored in `.ai/aiskills.db`
+using SQLite. Existing `.ai/memory.json` records are migrated on first access.
+URLs are treated as untrusted data; local and private-network targets are
+rejected.
+
 ## Main commands
 
 ```bash
@@ -70,6 +118,9 @@ aiskills goals
 aiskills workflows
 aiskills tools
 aiskills memory
+aiskills reference add https://example.com --type=design
+aiskills reference list
+aiskills preference list
 ```
 
 `aiskills run` is read-only by default and requires a configured, available
@@ -94,7 +145,235 @@ file validation, and verification runs under Linux bubblewrap. CLI-based Smurf
 workers remain disabled until their process boundary is integrated. See [MCP setup](docs/MCP.md) and the
 [integration audit](docs/SMURF_INTEGRATION.md) for the precise supported scope.
 
+## User-installed skills
+
+Acquire a saved design/backend reference and inspect its evidence:
+
+```bash
+aiskills reference add https://example.com --type=design
+aiskills reference fetch <reference-id>
+aiskills reference inspect <reference-id>
+aiskills preference add design "Prefer warm colors and compact navigation"
+aiskills preference confirm <preference-id>
+```
+
+Acquisition supports public HTTPS pages, validates every redirect and DNS answer,
+pins each connection to a validated address, bounds time/response size, and stores
+untrusted text, title, color/font observations, findings and a content hash in SQLite.
+It does not execute JavaScript, bypass authentication or capture screenshots.
+MCP acquisition additionally requires the host's `network.read` grant. Design
+observations become candidate preferences for inspection; sessions include only
+confirmed explicit user preferences relevant to the task. Preferences cannot
+enable packages or grant permissions. Inferred observations never auto-promote.
+
+For rendered public pages, use `aiskills reference capture <reference-id>`.
+This launches an ephemeral Chromium process inside Warden with no direct network
+grants. The parent HTTPS broker validates DNS, redirects, allowed hosts and request
+budgets before fulfilling GET requests. JavaScript rendering and accessibility
+snapshots are supported; PNG screenshots are stored as files beside the memory DB,
+not injected as base64 into tool context. `--asset-hosts=cdn.example.com` explicitly
+allows additional asset hosts. POST requests, WebSockets, service workers, downloads
+and existing browser profiles/cookies are unavailable in this read-only capture.
+
+Set `AI_SKILLS_CHROMIUM_BINARY` to an installed Chromium executable (Linux default:
+`/usr/lib/chromium/chromium`) and `AI_SKILLS_WARDEN_BINARY` to a working Warden.
+The driver uses a 45-second/2 GiB process budget. Warden is mandatory; browser
+capture fails closed when isolation cannot start. The driver passes the `HOME`
+environment name for Playwright initialization but does not mount the home directory.
+Chromium's inner sandbox is disabled inside the required Warden boundary. This
+path is verified on Linux; other platforms remain unverified.
+MCP `inspect_reference` returns compact saved evidence; `view_reference_screenshot`
+loads integrity-verified PNG bytes only when explicitly called. The browser
+boundary, review findings and regression evidence are recorded in
+[the browser security notes](docs/BROWSER_SECURITY.md).
+
+Launch a session with capabilities selected for the task:
+
+```bash
+aiskills session --agent=codex --dry-run "review widgets"
+aiskills session --agent=claude "review widgets"
+aiskills session --agent=codex --print "explain this project"
+aiskills session --agent=codex --write "implement the dashboard"
+```
+
+Sessions use temporary configuration and approved skills enabled in the current
+project. Read-only/plan mode is the default. `--write` selects Codex's workspace-write
+sandbox or Claude's normal permission prompts; Warden runtime grants remain separate.
+Read-only sessions deny executable MCP startup/calls and session hooks because
+an approved external tool could still change remote state. Standalone MCP hosts
+must grant `shell.execute` in their runtime configuration or explicitly launch
+`mcp --allow-capability-execution`; requests cannot grant it themselves.
+Matched declarative instructions are included. A compact four-tool MCP interface
+provides discovery, instruction loading, tool search and tool calls. Tool schemas
+and MCP processes load on demand through reviewed Warden launchers, including
+when the task changes later in the session. Each call checks current activation,
+snapshot integrity, agent compatibility and approval, then closes its gateway.
+An already-started call is not retroactively canceled by a later approval change.
+Session signals and print timeouts escalate to a forced process-group shutdown
+after one second on Linux, including remaining agent/MCP descendants.
+Claude gets strict
+MCP configuration and disabled slash-command discovery. Codex explicitly disables
+each effective MCP server before adding the selected set. Existing agent settings
+are never rewritten. Temporary files are removed on normal exit or spawn failure.
+Use `AI_SKILLS_CODEX_BINARY` or `AI_SKILLS_CLAUDE_BINARY` for a specific executable.
+
+Routing uses task tokens, explicit triggers, negative triggers, agent compatibility,
+and backend providers detected from project dependencies. Required skills load
+before their consumers; missing, incompatible or cyclic dependencies stop routing
+with an actionable error. A 12,000-token estimated budget bounds selected guidance.
+`skills pin <id>` keeps an approved enabled skill selected; `skills unpin <id>`
+restores automatic selection. Pins cannot approve packages or bypass compatibility.
+`skills metrics` shows recent local routing decisions and estimated context sizes;
+raw task text is omitted. Token counts use character estimates and are not billing
+measurements. Run `pnpm benchmark:routing` for the deterministic selection corpus.
+
+Run `aiskills doctor --json` for configuration, registry/dependency, snapshot
+integrity, executable and Warden readiness checks. Failures return exit code 1;
+optional integrations and unverified client isolation produce warnings.
+`node scripts/verify-release.mjs <tarball-directory>` checks packaged files and
+`node scripts/smoke-release.mjs <tarball-directory>` installs the four tarballs
+in a clean temporary environment and verifies CLI, SQLite and MCP behavior.
+The smoke test defaults to cached/offline dependencies; set
+`AI_SKILLS_SMOKE_ONLINE=1` to allow dependency downloads.
+
+Activation and runtime-policy changes are journaled before lockfile writes.
+Pending synchronization blocks surviving active capabilities from loading. Run
+`aiskills skills recover` to inspect pending project locks, temporary directories
+and unreferenced snapshots, then `aiskills skills sync-lock` in an affected project
+to synchronize from reviewed catalog state. For an invalid lockfile,
+`skills sync-lock --reset` preserves it as a uniquely named backup before rebuilding.
+No temporary directories or snapshots are deleted by recovery reporting. Owner-PID
+probes are diagnostic only; missing owner metadata is unknown, not proof of a dead run.
+Lockfiles pin package content and per-runtime policy/rule hashes. New runtime
+permissions require lock synchronization; edited project lockfiles cannot grant
+permissions or change the reviewed catalog state.
+
+Session overrides disable Codex's native plugin/remote-plugin and hook features,
+and disable installed Claude plugins plus native hooks for the invocation.
+Administrator-managed capabilities and native skill discovery still require
+client-specific policy checks; session overrides do not claim to bypass admin policy.
+
+```bash
+aiskills add ./my-skill
+aiskills install owner/repository --ref=main --path=skills/my-skill
+aiskills skills inspect my-skill
+aiskills skills review my-skill --yes
+aiskills skills enable my-skill
+aiskills plan "review widgets"
+aiskills skills disable my-skill
+```
+
+`aiskill` is also available as an alias for `aiskills`.
+
+Imports accept `skill.yaml` or `SKILL.md` with name/description frontmatter.
+They snapshot content into the user configuration directory, reject symlinks,
+enforce size limits, and scan instructions without executing package code.
+GitHub imports pin the resolved commit and content hash. `--dry-run` previews
+an import; `--yes` approves only candidates without high-risk scanner findings.
+Otherwise use `review <id> --yes` after inspection. Activation is project scoped
+and writes a version-2 lockfile; version-1 lockfiles remain readable.
+
+Approved declarative packages participate in runtime task routing. Their
+instructions load only when selected. Original source edits do not change the
+installed snapshot, and every use verifies integrity. `remove <id>` removes the
+registration and activations but retains the snapshot for recovery. Use
+`aiskills skills update <id> --dry-run` to preview changed content, then run
+`update <id>` to register it. Changed content revokes approval and disables
+all project activations. Review and enable again before use. `history <id>`
+lists previous revisions; `rollback <id> --digest=<hash>` restores one for review.
+
+Executable packages remain disabled for instruction activation. For explicit
+runtime execution, add a `runtime.json` declaration:
+
+```json
+{"kind":"mcp","command":["/absolute/path/to/node","${PACKAGE}/server.mjs"],"tools":["read"],"network":[],"env":[]}
+```
+
+Use `aiskills skills prepare <id>` to preview the generated policy and rules,
+then `prepare <id> --yes` to approve execution. `aiskills skills connect <id>`
+launches through Warden with inherited stdio. The policy grants read access to
+the package and executable, no writes, and only declared hosts/environment names.
+`kind: command` runs a plain sandboxed command. An MCP declaration may instead
+provide an HTTPS `upstream`; its server runs remotely and has no local process
+isolation. The declared `tools` are filtered through the Warden gateway.
+
+After preparing an MCP package, use `skills enable <id>` to make it eligible for
+task-selected session activation. Commands without MCP stay explicit-only.
+
+MCP execution requires Warden with `connect`; the published `0.2.0-beta.4` Linux
+binary passed the gateway, broker and browser integration tests. Stable 0.1.16
+does not provide `connect`. Set `AI_SKILLS_WARDEN_BINARY` to a compatible verified
+binary. No direct execution fallback is provided. Remote credential setup and
+background updates remain follow-up work.
+The heuristic scanner cannot prove
+instructions safe; review and runtime permissions remain necessary.
+
+The AI Skills MCP server exposes `discover_capabilities` (compact task matches),
+`load_skill` (instructions on demand), `search_tools` (matching gateway schemas)
+and `call_capability` (a reviewed tool call). `load_skill` supports built-ins and
+approved enabled project skills, including task-selected nested plugin guidance.
+Loading verifies installed snapshots and enforces context budgets. Tool discovery
+starts at most eight matching gateways and returns at most 64 KB of schemas;
+calls accept at most 64 KB of arguments and return at most 256 KiB. Tool names
+must be advertised by the approved gateway; Warden enforces the reviewed allowlist.
+`mcp --compact` exposes only these four tools; the default MCP server also exposes
+project, orchestration and reference tools. Remote callers cannot install packages
+or approve permissions. Upstreams are closed after each request, so stateful MCP
+servers that depend on connection-local state require a different integration.
+
 ## Built-in skills
+
+### Plugin bundles
+
+An `aiskills-plugin.json` can combine nested skills, MCP runtimes and bounded
+session hooks. Each runtime requires a separate `prepare --entry` approval:
+
+```json
+{
+  "schema_version": 1,
+  "id": "product-bundle",
+  "name": "Product bundle",
+  "description": "Frontend product workflows",
+  "version": "1.0.0",
+  "skills": ["skills/frontend/SKILL.md"],
+  "runtimes": {
+    "docs": {"kind":"mcp","command":["/absolute/path/to/node","${PACKAGE}/docs.mjs"],"tools":["search"]},
+    "check": {"kind":"command","command":["/absolute/path/to/node","${PACKAGE}/check.mjs"]}
+  },
+  "hooks": {"before-session":"check"}
+}
+```
+
+```bash
+aiskills add ./product-bundle --yes
+aiskills skills prepare product-bundle --entry=docs
+aiskills skills prepare product-bundle --entry=docs --yes
+aiskills skills prepare product-bundle --entry=check --yes
+aiskills skills enable product-bundle
+aiskills session --agent=claude "product-bundle frontend review"
+```
+
+All runtime entries must be approved before activation. Nested skills load only
+on a task match. `before-session` and `after-session` hooks reference command
+entries and run through Warden with a 30-second host timeout; a failing pre-hook
+prevents agent startup. Imports do not execute hooks. Native lifecycle events
+require explicit mappings to this format; automatic third-party hook registration
+is not supported.
+
+Native `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, and root
+`plugin.json` layouts can also be imported. Their nested skills and MCP servers
+are adapted without executing installers. Native servers require explicit host
+preparation, for example:
+
+```bash
+aiskills skills prepare native-product --entry=docs --executable=/absolute/path/to/node --tools=search,read
+aiskills skills prepare native-product --entry=docs --executable=/absolute/path/to/node --tools=search,read --yes
+```
+
+`--hosts=api.example.com` grants named egress hosts in the reviewed policy.
+Environment placeholders must use same-name `${VARIABLE}` references; inline
+credential values/headers are rejected. Unsupported native hook, agent or command
+layouts require explicit bundle mappings and fail import with an actionable error.
 
 Skills are declarative YAML manifests in `packages/core/skills`. They are
 loaded by the core registry and routed by capability and task context.

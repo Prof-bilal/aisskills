@@ -7,6 +7,8 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
+const version = JSON.parse(await readFile(join(root,'package.json'),'utf8')).version;
+const tag = version.includes('-') ? 'beta' : 'latest';
 const releaseDirectory = await mkdtemp(join(tmpdir(), "aiskills-publish-"));
 const packages = ["aiskills-core", "aiskills-adapters-local", "aiskills-sdk", "@prof-bilal/aiskills"];
 
@@ -17,7 +19,7 @@ for (const packageName of packages) {
   process.stderr.write(stderr);
   const tarball = readdirSync(releaseDirectory).find((file) => file.endsWith(".tgz") && !before.has(file));
   if (!tarball) throw new Error(`No tarball was created for ${packageName}`);
-  const result = await execFileAsync("npm", ["publish", join(releaseDirectory, tarball), "--access", "public", "--ignore-scripts"], { cwd: root, maxBuffer: 4 * 1024 * 1024 });
+  const result = await execFileAsync("npm", ["publish", join(releaseDirectory, tarball), "--tag", tag, "--access", "public", "--ignore-scripts"], { cwd: root, maxBuffer: 4 * 1024 * 1024 });
   process.stdout.write(result.stdout);
   process.stderr.write(result.stderr);
 }

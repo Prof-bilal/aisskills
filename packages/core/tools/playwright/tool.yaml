@@ -1,0 +1,7 @@
+schema_version: 1
+id: playwright
+name: Playwright CLI
+category: [browser, testing, reference-analysis]
+capabilities: [browser-reference, browser-automation, accessibility-snapshot]
+risk_level: high
+command: playwright-cli

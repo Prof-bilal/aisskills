@@ -1,0 +1,23 @@
+schema_version: 1
+id: clerk-engineer
+name: Clerk Engineer
+version: 0.1.0
+category: provider
+description: Implement and verify Clerk authentication, sessions, organizations, user synchronization, and protected routes.
+capabilities: [clerk, authentication, provider-integration]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, frontend-engineer, auth-security, authorization-security]
+checks: [session-boundary, authorization, sdk-version, tests]
+risk_level: high
+activation:
+  triggers: [clerk, organization auth]
+context:
+  budget_tokens: 2200
+  load_references_on_demand: true
+provider:
+  name: clerk
+  version_policy: official-current

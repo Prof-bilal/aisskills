@@ -36,6 +36,8 @@ import {
   createDecisionRecord,
   loadMemoryRecords,
   appendMemoryRecord,
+  ensureProjectMemoryStore,
+  canonicalizeReferenceUrl,
   createRetrospective,
   getBuiltInWorkflowsDirectory,
   getBuiltInToolsDirectory,
@@ -84,17 +86,17 @@ test("SDK exposes validated constructors for extension types", () => {
 
 test("skill registry loads built-ins and resolves dependencies", async () => {
   const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
-  assert.equal(registry.list().length, 38);
+  assert.equal(registry.list().length, 43);
   assert.deepEqual(registry.list().map((skill) => skill.id), [
     "agent-security", "api-security", "architecture-review", "auth-security",
-    "authorization-security", "backend-engineer", "brainstorm", "build-vs-buy",
-    "code-reviewer", "completion-checker", "database-architect", "dependency-security",
-    "devil-advocate", "evidence-first", "feature-prioritizer", "frontend-engineer",
-    "fullstack-engineer", "grill-me", "idea-validator", "input-validation",
-    "integration-verifier", "orchestrator", "planner", "product-engineer",
+    "authorization-security", "backend-engineer", "brainstorm", "browser-reference", "build-vs-buy",
+    "clerk-engineer", "code-reviewer", "completion-checker", "database-architect", "dependency-security",
+    "devil-advocate", "evidence-first", "feature-prioritizer", "firebase-engineer",
+    "frontend-engineer", "fullstack-engineer", "grill-me", "idea-validator", "input-validation",
+    "integration-verifier", "orchestrator", "payments-engineer", "planner", "product-engineer",
     "prompt-injection-review", "qa-engineer", "regression-checker", "repo-explorer",
     "requirements-checker", "researcher", "secrets-review",
-    "security-reviewer", "simplify", "startup-validator", "tech-stack-selector",
+    "security-reviewer", "simplify", "startup-validator", "supabase-engineer", "tech-stack-selector",
     "technical-writer", "threat-model", "ui-designer"
   ]);
   assert.deepEqual(registry.resolve(["completion-checker"]).map((skill) => skill.id), [
@@ -341,7 +343,7 @@ test("verification report supports static and adversarial check categories", () 
 
 test("pack registry loads built-ins and resolves dependencies", async () => {
   const registry = await PackRegistry.fromDirectory(getBuiltInPacksDirectory());
-  assert.equal(registry.list().length, 5);
+  assert.equal(registry.list().length, 7);
   assert.deepEqual(registry.resolve(["fullstack"]).map((pack) => pack.id), ["core", "fullstack"]);
 });
 
@@ -426,6 +428,33 @@ test("retrospectives are stored as observation memory", () => {
   const record = createRetrospective({ whatWorked: "tests", whatFailed: "none", wrongAssumption: "none", futureAvoidance: "none" });
   assert.equal(record.category, "observation");
   assert.match(record.content, /tests/);
+});
+
+test("SQLite memory store migrates legacy records and stores references and preferences", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "aiskills-sqlite-memory-"));
+  await fs.mkdir(path.join(root, ".ai"), { recursive: true });
+  await fs.writeFile(path.join(root, ".ai", "memory.json"), JSON.stringify([{ id: "legacy-1", category: "observation", content: "legacy", createdAt: "2026-01-01T00:00:00.000Z" }]));
+  const store = await ensureProjectMemoryStore(root);
+  assert.equal(store.listMemory()[0].content, "legacy");
+  const reference = store.addReference({ url: "https://example.com/design#hero", sourceType: "design" });
+  assert.equal(reference.canonicalUrl, "https://example.com/design");
+  const signal = store.addPreferenceSignal({ projectId: root, category: "layout-density", signal: "dense", source: "explicit-user", confidence: 1 });
+  assert.equal(signal.status, "candidate");
+  store.setPreferenceStatus(signal.id, "promoted");
+  assert.equal(store.listPreferenceSignals(root, "promoted")[0].signal, "dense");
+  store.close();
+});
+
+test("reference URL validation rejects local and non-HTTP targets", () => {
+  assert.throws(() => canonicalizeReferenceUrl("http://127.0.0.1:3000"), /local or private/);
+  assert.throws(() => canonicalizeReferenceUrl("file:///tmp/reference.html"), /http or https/);
+});
+
+test("provider and reference tasks route to conditional skills", async () => {
+  const registry = await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
+  const ids = registry.list().map(skill => skill.id);
+  assert.ok(routeSkills(analyzeTask("Review Supabase RLS and Stripe checkout"), ids).includes("supabase-engineer"));
+  assert.ok(routeSkills(analyzeTask("Inspect this browser design reference URL"), ids).includes("browser-reference"));
 });
 
 test("extension review distinguishes executable plugins from declarative skills", () => {

@@ -1,0 +1,23 @@
+schema_version: 1
+id: payments-engineer
+name: Payments Engineer
+version: 0.1.0
+category: provider
+description: Design and verify payment, checkout, subscription, webhook, refund, and billing integrations with safe idempotency and test-mode defaults.
+capabilities: [payments, billing, provider-integration]
+requires:
+  permissions: [repository.read, network.read]
+recommended_tools: [git]
+compatible_agents: [codex, claude, opencode, gemini]
+dependencies:
+  skills: [backend-engineer, api-security, secrets-review, integration-verifier]
+checks: [idempotency, webhook-signature, restricted-credentials, test-mode]
+risk_level: high
+activation:
+  triggers: [stripe, payment, checkout, subscription, billing]
+context:
+  budget_tokens: 2600
+  load_references_on_demand: true
+provider:
+  name: stripe
+  version_policy: official-current

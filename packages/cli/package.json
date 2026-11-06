@@ -1,6 +1,6 @@
 {
   "name": "@prof-bilal/aiskills",
-  "version": "0.1.6",
+  "version": "0.2.0-beta.1",
   "description": "Local-first AI Skills Platform CLI",
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "directory": "packages/cli"
   },
   "bin": {
-    "aiskills": "dist/index.js"
+    "aiskills": "dist/index.js",
+    "aiskill": "dist/index.js"
   },
   "files": [
     "dist"

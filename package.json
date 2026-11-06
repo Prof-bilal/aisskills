@@ -1,7 +1,7 @@
 {
   "name": "aiskills-workspace",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.2.0-beta.1",
   "description": "Local-first AI Skills Platform workspace",
   "license": "MIT",
   "packageManager": "pnpm@12.14.0",
@@ -9,10 +9,12 @@
     "node": ">=20"
   },
   "scripts": {
+    "benchmark:routing": "pnpm build && node scripts/benchmark-routing.mjs",
     "build": "pnpm -r build",
     "test": "pnpm build && node --test tests/*.test.mjs",
     "clean": "pnpm -r clean",
-    "release:check": "pnpm clean && node -e \"require('node:fs').rmSync('release', { recursive: true, force: true })\" && pnpm install --frozen-lockfile && pnpm build && pnpm test && pnpm -r pack --pack-destination ./release && node scripts/verify-release.mjs",
+    "release:check": "pnpm clean && node -e \"require('node:fs').rmSync('release', { recursive: true, force: true })\" && pnpm install --frozen-lockfile && pnpm build && pnpm test && pnpm -r --filter '!aiskills-workspace' pack --pack-destination ./release && node scripts/verify-release.mjs",
+    "release:smoke": "node scripts/smoke-release.mjs",
     "release:publish": "pnpm release:check && node scripts/publish-packages.mjs"
   },
   "devDependencies": {
