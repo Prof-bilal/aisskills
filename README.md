@@ -6,10 +6,9 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-`0.2.0-beta.1` is release-ready on the `beta` channel. The packages are built,
-tested, audited, and verified as clean installable archives. Public npm
-publication is the final external step and requires an authenticated npm
-publisher account.
+`0.2.0-beta.1` is publicly available on npm under the `beta` channel. The
+packages are built, tested, audited, and verified through a clean install of
+the published CLI.
 
 ## The theory
 

@@ -105,7 +105,8 @@ memory; and reproducible release artifacts. Passing a subset is not launch appro
 - Workspace/public packages are versioned `0.2.0-beta.1`; both `aiskills` and
   `aiskill` CLI names are included. Publishing chooses the beta tag for prereleases.
   All four beta archives passed inspection and clean-install SQLite/MCP smoke tests.
-  No npm publication has occurred.
+  All four packages are now published publicly on npm at the `beta` tag, and a
+  clean install of `@prof-bilal/aiskills@0.2.0-beta.1` passed the CLI version check.
 - Runtime dependency audit reported zero vulnerabilities after upgrading the
   compatible transitive `body-parser` resolution to 2.4.0, which addresses
   [GHSA-27r3-jxmh-p828](https://github.com/expressjs/body-parser/security/advisories/GHSA-27r3-jxmh-p828).
