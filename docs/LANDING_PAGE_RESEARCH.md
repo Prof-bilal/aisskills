@@ -18,6 +18,7 @@ execute behind reviewable policies.
 | [Linear homepage](https://linear.app/) | Linear | The page leads with one product promise, then shows an interface in motion and explains the workflow through focused sections. |
 | [Cursor homepage](https://cursor.com/) | Cursor | The page leads with a concise coding-agent promise and puts an interactive agent workspace immediately after the hero. |
 | [Vercel homepage](https://vercel.com/) | Vercel | “Agent Stack” is used as a clear product category, with an explicit developer entry point and grouped capabilities. |
+| [npm download counts API](https://github.com/npm/registry/blob/main/docs/download-counts.md) | npm | The public point endpoint provides aggregate package counts but limits historical queries to 18 months, so the navbar counter sums bounded windows from the package creation date. |
 
 ## Applied design decisions
 

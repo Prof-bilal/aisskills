@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const installCommand = "npm install -g @prof-bilal/aiskills@beta";
 
@@ -10,6 +10,31 @@ function Arrow() {
 
 function Spark({ tone = "violet" }: { tone?: "violet" | "mint" | "amber" }) {
   return <span aria-hidden="true" className={`spark spark-${tone}`} />;
+}
+
+function NpmDownloads() {
+  const [downloads, setDownloads] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/npm-downloads")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { downloads?: number } | null) => {
+        if (active && typeof data?.downloads === "number") setDownloads(data.downloads);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return (
+    <a className="npm-stat" href="https://www.npmjs.com/package/@prof-bilal/aiskills" target="_blank" rel="noreferrer">
+      <span className="npm-badge">npm</span>
+      <span><b>{downloads === null ? "—" : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(downloads)}</b> all-time</span>
+    </a>
+  );
 }
 
 export default function Home() {
@@ -30,6 +55,7 @@ export default function Home() {
           <span className="brand-mark"><span /><span /><span /></span>
           <span>AI SKILLS</span>
         </a>
+        <NpmDownloads />
         <button className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="nav-links" onClick={() => setMenuOpen(!menuOpen)}>
           <span className="sr-only">Toggle navigation</span>
           <span /><span />
