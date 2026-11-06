@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - packages/adapters/*
+  - apps/*
 allowBuilds:
   better-sqlite3: true
 minimumReleaseAgeExclude:
