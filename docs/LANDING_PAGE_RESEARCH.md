@@ -4,10 +4,12 @@ Research date: 2026-11-06
 
 ## Decision
 
-Position AI Skills as a capability layer for coding agents, not as another
-agent or MCP directory. The page should make the product's core loop legible in
-the first screen: install a catalog, route only relevant capabilities, then
-execute behind reviewable policies.
+Revised 2026-11-07. The first version ("capability layer", "Stop loading the
+whole toolbox") assumed visitors already knew what an agent skill is, never
+showed the command a user types, and implied an installed GitHub skill was
+immediately usable. The page now explains the product in plain language for
+people who use Claude Code, Codex, OpenCode or Gemini CLI but have not heard of
+skill routing.
 
 ## Source ledger
 
@@ -22,17 +24,19 @@ execute behind reviewable policies.
 
 ## Applied design decisions
 
-- A sharp hero promise: “Stop loading the whole toolbox.”
-- A product illustration above the fold showing task routing, loaded skills,
-  and Warden verification; it is intentionally illustrative, not a fake live
-  session or unsupported performance claim.
-- A three-step narrative: bring skills, route by intent, execute behind
-  guardrails.
-- A security section that explains snapshots, lockfiles, and explicit runtime
-  execution without implying that untrusted code is automatically safe.
-- A single install path and GitHub CTA so the page serves developers first.
-- Dark, technical visual language with restrained violet/mint accents to signal
-  routing and trust while keeping text contrast high.
+- The hero says what it is (a free CLI), who it is for (the four supported
+  agents), and defines "skill" in the first sentence.
+- The hero example shows the real command (`aiskills session --agent=claude`)
+  and is labelled as an example, not a live session.
+- Order: what is a skill → three concrete problems → three steps with real
+  commands → built-in catalog by pack → quickstart → FAQ.
+- The quickstart shows the true path for GitHub skills: install, review, enable.
+- Supported agents match the CLI: `run` supports all four; `session` supports
+  Claude Code and Codex. Cursor is not listed because it is not supported.
+- No context-reduction percentage: the only measured figure comes from an
+  8-skill regression fixture, not real workloads.
+- Security copy stays within the README: skills are scanned, pinned and
+  approved, and the scanner cannot prove a skill is safe.
 
 ## Constraints and follow-up
 
