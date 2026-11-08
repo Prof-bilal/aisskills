@@ -12,3 +12,7 @@ release/
 
 # External integration sources and local run data
 .integration/
+
+# benchmark caches and raw run output
+benchmarks/.cache/
+benchmarks/results/*/raw/

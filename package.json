@@ -13,6 +13,7 @@
     "landing:build": "pnpm --dir apps/landing build",
     "landing:start": "pnpm --dir apps/landing start",
     "benchmark:routing": "pnpm build && node scripts/benchmark-routing.mjs",
+    "bench:micro": "pnpm build && node benchmarks/micro.mjs",
     "build": "pnpm -r build",
     "test": "pnpm build && node --test tests/*.test.mjs",
     "clean": "pnpm -r clean",

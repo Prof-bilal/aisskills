@@ -1,0 +1,46 @@
+# Hand-labelled routing corpus over the 43 built-in skills.
+# `expect`: task-specific skills that should be selected (core skills like repo-explorer,
+# planner, evidence-first and completion-checker are scored separately as overhead).
+# `reject`: skills that would be clearly wrong for the task.
+- { task: "add login to my app", expect: [auth-security], reject: [payments-engineer, ui-designer] }
+- { task: "add secure password reset to the signup flow", expect: [auth-security], reject: [payments-engineer] }
+- { task: "review who can access admin endpoints and fix role checks", expect: [authorization-security], reject: [ui-designer] }
+- { task: "find secrets leaked in the repo", expect: [secrets-review], reject: [ui-designer, brainstorm] }
+- { task: "check API keys are not committed and rotate exposed credentials", expect: [secrets-review], reject: [ui-designer] }
+- { task: "validate user input on the comments form to stop injection", expect: [input-validation], reject: [payments-engineer] }
+- { task: "harden the public REST API against abuse", expect: [api-security], reject: [ui-designer] }
+- { task: "audit npm dependencies for known vulnerabilities", expect: [dependency-security], reject: [ui-designer] }
+- { task: "check our AI agent for prompt injection risks", expect: [prompt-injection-review], reject: [payments-engineer] }
+- { task: "do a full security review of this repository", expect: [security-reviewer, threat-model], reject: [brainstorm] }
+- { task: "build a threat model for the file upload feature", expect: [threat-model], reject: [ui-designer] }
+- { task: "make the landing page responsive on mobile", expect: [frontend-engineer], reject: [secrets-review, payments-engineer] }
+- { task: "redesign the dashboard UI with better spacing and typography", expect: [ui-designer], reject: [secrets-review] }
+- { task: "build a React settings page with a form", expect: [frontend-engineer], reject: [secrets-review] }
+- { task: "add a REST endpoint that returns paginated orders", expect: [backend-engineer], reject: [ui-designer] }
+- { task: "design a postgres schema for orders and invoices", expect: [database-architect], reject: [ui-designer] }
+- { task: "write a migration that adds an index to the users table", expect: [database-architect], reject: [ui-designer] }
+- { task: "add row level security policies in supabase", expect: [supabase-engineer], reject: [firebase-engineer] }
+- { task: "set up firestore security rules", expect: [firebase-engineer], reject: [supabase-engineer] }
+- { task: "add clerk organizations to the app", expect: [clerk-engineer], reject: [firebase-engineer] }
+- { task: "integrate stripe checkout for subscriptions", expect: [payments-engineer], reject: [ui-designer] }
+- { task: "handle stripe webhook payment failures", expect: [payments-engineer], reject: [ui-designer] }
+- { task: "build a full stack todo feature with API and UI", expect: [fullstack-engineer], reject: [secrets-review] }
+- { task: "explain the repository architecture", expect: [architecture-review], reject: [payments-engineer, ui-designer] }
+- { task: "choose a tech stack for a new realtime chat app", expect: [tech-stack-selector], reject: [secrets-review] }
+- { task: "should we build our own auth or buy a service", expect: [build-vs-buy], reject: [ui-designer] }
+- { task: "research the best way to cache API responses", expect: [researcher], reject: [ui-designer] }
+- { task: "brainstorm features for a habit tracking app", expect: [brainstorm], reject: [secrets-review] }
+- { task: "validate this startup idea for a dog walking marketplace", expect: [startup-validator, idea-validator], reject: [secrets-review] }
+- { task: "prioritize the feature backlog for next quarter", expect: [feature-prioritizer], reject: [secrets-review] }
+- { task: "review this pull request", expect: [code-reviewer], reject: [payments-engineer] }
+- { task: "write regression tests for the checkout bug", expect: [regression-checker], reject: [ui-designer] }
+- { task: "set up a QA test plan for the release", expect: [qa-engineer], reject: [brainstorm] }
+- { task: "check the implementation meets the requirements document", expect: [requirements-checker], reject: [ui-designer] }
+- { task: "verify the payment service integration works end to end", expect: [integration-verifier], reject: [ui-designer] }
+- { task: "simplify this overly complex module", expect: [simplify], reject: [payments-engineer] }
+- { task: "write the README and API documentation", expect: [technical-writer], reject: [secrets-review] }
+- { task: "challenge my plan and find the weak points", expect: [devil-advocate], reject: [ui-designer] }
+- { task: "fix the typo in the footer", expect: [], reject: [secrets-review, payments-engineer, threat-model] }
+- { task: "what does the parse function return", expect: [], reject: [auth-security, payments-engineer, threat-model] }
+- { task: "rename the variable count to total", expect: [], reject: [secrets-review, payments-engineer] }
+- { task: "hello", expect: [], reject: [auth-security, payments-engineer] }

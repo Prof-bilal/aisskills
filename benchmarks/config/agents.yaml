@@ -1,0 +1,53 @@
+# Probed 2026-11-08 from each CLI's --help and binary. Re-run `node benchmarks/setup/agents.mjs --check` after upgrades.
+claude:
+  version: 2.1.316
+  install: preinstalled
+  headless: [-p, --output-format, stream-json, --verbose]
+  model: [--model, claude-haiku-5-5, --effort, low]   # fixed by the user for all benchmark runs
+  usage: stream-json result event (usage, total_cost_usd, duration_ms, num_turns)
+  mcp: { method: flag, args: [--strict-mcp-config, --mcp-config, "{file}"] }
+  skills: { dir: "$CLAUDE_CONFIG_DIR/skills" }
+  isolate: { env: CLAUDE_CONFIG_DIR }
+  deferral_off: { env: { ENABLE_TOOL_SEARCH: "false" } }
+  base_url_env: ANTHROPIC_BASE_URL
+  arms: [bare, native, native-eager, aiskills-mcp, aiskills-session]
+
+opencode:
+  version: 2.1.3
+  install: preinstalled (mise)
+  headless: [run, --format, json, --auto, --standalone]
+  model: [--model, opencode/deepseek-v4.1-flash-free]
+  usage: json event stream (confirmed during adapter work)
+  mcp: { method: config, env: OPENCODE_CONFIG, key: mcp }
+  skills: { note: "reads ~/.claude skills unless OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1" }
+  isolate: { env: [OPENCODE_CONFIG, OPENCODE_DISABLE_CLAUDE_CODE_SKILLS, OPENCODE_DISABLE_AUTOUPDATE] }
+  arms: [bare, native, aiskills-mcp, aiskills-session]
+
+kilo:
+  version: 7.8.27
+  install: npm i -g @kilocode/cli
+  headless: [run, --format, json, --auto]
+  model: [--model, "kilo/kilo-auto/free"]   # TODO: pick one fixed free model; kilo-auto may switch models
+  usage: "`kilo stats` / `kilo export` after the run (confirmed during adapter work)"
+  mcp: { method: config, file: "$XDG_CONFIG_HOME/kilo/kilo.jsonc", key: mcp }
+  isolate: { env: XDG_CONFIG_HOME }
+  auth: none stored; free models to be verified
+  arms: [bare, native, aiskills-mcp]
+
+commandcode:
+  version: 1.88.5
+  install: npm i -g command-code
+  headless: [-p, --output-format, json, --yolo, --no-session, --skip-onboarding, --no-auto-update, -t]
+  model: [-m, deepseek/deepseek-v4.1-flash]   # Command Code's default, fixed by the user
+  usage: NDJSON events + final result line
+  mcp: { method: subcommand, cmd: "cmd mcp" }
+  skills: { flags: [--skill, "{dir}", --no-skills] }
+  auth: logged in as Prof-bilal
+  arms: [bare, native, aiskills-mcp]
+
+freebuff:
+  version: latest (binary self-downloads)
+  install: npm i -g freebuff
+  headless: none   # interactive TUI only; no -p/--print
+  mcp: { method: config, file: mcp.json, flag: --trust-agents }
+  arms: []          # reported as "not supported: no headless mode" unless driven through a pty later

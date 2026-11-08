@@ -1,0 +1,187 @@
+{
+  "generatedBy": "benchmarks/micro.mjs",
+  "note": "Bytes are exact; tokens are chars/4 estimates; timings are machine-dependent medians of 5.",
+  "static": [
+    {
+      "tools": 50,
+      "nativeEagerBytes": 41166,
+      "nativeDeferredNamesBytes": 923,
+      "aiskillsCompactBytes": 2339,
+      "aiskillsFullBytes": 7439
+    },
+    {
+      "tools": 100,
+      "nativeEagerBytes": 82902,
+      "nativeDeferredNamesBytes": 1861,
+      "aiskillsCompactBytes": 2339,
+      "aiskillsFullBytes": 7439
+    },
+    {
+      "tools": 200,
+      "nativeEagerBytes": 166482,
+      "nativeDeferredNamesBytes": 3838,
+      "aiskillsCompactBytes": 2339,
+      "aiskillsFullBytes": 7439
+    }
+  ],
+  "search": [
+    {
+      "tools": 50,
+      "allSchemasBytes": 43066,
+      "previousSearchBytes": 43015,
+      "step1Bytes": 5243,
+      "step1Tools": 20,
+      "step2Bytes": 2105,
+      "step2Tools": 3
+    },
+    {
+      "tools": 100,
+      "allSchemasBytes": 86802,
+      "previousSearchBytes": 63137,
+      "step1Bytes": 5263,
+      "step1Tools": 20,
+      "step2Bytes": 2108,
+      "step2Tools": 3
+    },
+    {
+      "tools": 200,
+      "allSchemasBytes": 174282,
+      "previousSearchBytes": 63137,
+      "step1Bytes": 5263,
+      "step1Tools": 20,
+      "step2Bytes": 2108,
+      "step2Tools": 3
+    }
+  ],
+  "spill": [
+    {
+      "resultChars": 1000,
+      "bytesToAgent": 1039,
+      "savedToFile": false
+    },
+    {
+      "resultChars": 8000,
+      "bytesToAgent": 8039,
+      "savedToFile": false
+    },
+    {
+      "resultChars": 16000,
+      "bytesToAgent": 16039,
+      "savedToFile": false
+    },
+    {
+      "resultChars": 32000,
+      "bytesToAgent": 2239,
+      "savedToFile": true
+    },
+    {
+      "resultChars": 100000,
+      "bytesToAgent": 2240,
+      "savedToFile": true
+    },
+    {
+      "resultChars": 250000,
+      "bytesToAgent": 2240,
+      "savedToFile": true
+    }
+  ],
+  "startup": {
+    "coldCallMs": 166,
+    "native": {
+      "servers": 9,
+      "tools": 220,
+      "readyMs": 93,
+      "rssMb": 481
+    },
+    "aiskills": {
+      "servers": 1,
+      "tools": 4,
+      "readyMs": 320,
+      "rssMb": 90
+    }
+  },
+  "routing": {
+    "tasks": 42,
+    "precision": 0.32,
+    "recall": 0.825,
+    "wrongPicks": 3,
+    "avgSelectedTokens": 757,
+    "allSkillsTokens": 6439,
+    "misses": [
+      {
+        "task": "add secure password reset to the signup flow",
+        "expected": [
+          "auth-security"
+        ],
+        "got": [
+          "security-reviewer",
+          "threat-model",
+          "secrets-review"
+        ]
+      },
+      {
+        "task": "audit npm dependencies for known vulnerabilities",
+        "expected": [
+          "dependency-security"
+        ],
+        "got": [
+          "security-reviewer",
+          "threat-model"
+        ]
+      },
+      {
+        "task": "should we build our own auth or buy a service",
+        "expected": [
+          "build-vs-buy"
+        ],
+        "got": [
+          "security-reviewer",
+          "threat-model",
+          "auth-security",
+          "frontend-engineer",
+          "ui-designer",
+          "backend-engineer",
+          "fullstack-engineer"
+        ]
+      },
+      {
+        "task": "validate this startup idea for a dog walking marketplace",
+        "expected": [
+          "startup-validator",
+          "idea-validator"
+        ],
+        "got": [
+          "input-validation",
+          "product-engineer",
+          "idea-validator",
+          "feature-prioritizer"
+        ]
+      },
+      {
+        "task": "simplify this overly complex module",
+        "expected": [
+          "simplify"
+        ],
+        "got": []
+      },
+      {
+        "task": "write the README and API documentation",
+        "expected": [
+          "technical-writer"
+        ],
+        "got": [
+          "backend-engineer",
+          "fullstack-engineer",
+          "api-security"
+        ]
+      },
+      {
+        "task": "challenge my plan and find the weak points",
+        "expected": [
+          "devil-advocate"
+        ],
+        "got": []
+      }
+    ]
+  }
+}
