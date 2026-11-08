@@ -1,0 +1,34 @@
+# Each task is answered only by reading one skill. Prompts describe the job; they do NOT name the skill,
+# so routing has to find it. Expected answer = number of lines starting with "## " in that SKILL.md.
+skill-finishing-branch:
+  skill: finishing-a-development-branch
+  topic: "wrapping up a feature branch once the work is done, deciding how to integrate it"
+  expect: ["9"]
+skill-tdd:
+  skill: test-driven-development
+  topic: "writing tests before the implementation code"
+  expect: ["12"]
+skill-verification:
+  skill: verification-before-completion
+  topic: "making sure a claim of success is backed by evidence before saying the work is done"
+  expect: ["8"]
+skill-writing-plans:
+  skill: writing-plans
+  topic: "turning a spec into a step-by-step implementation plan"
+  expect: ["12"]
+skill-parallel-agents:
+  skill: dispatching-parallel-agents
+  topic: "splitting independent failures across several agents that run at the same time"
+  expect: ["8"]
+skill-receiving-review:
+  skill: receiving-code-review
+  topic: "handling feedback that a reviewer left on a pull request"
+  expect: ["13"]
+skill-worktrees:
+  skill: using-git-worktrees
+  topic: "isolating a feature in its own working directory without switching branches"
+  expect: ["7"]
+skill-coauthoring:
+  skill: doc-coauthoring
+  topic: "writing a document together with a user in stages"
+  expect: ["6"]

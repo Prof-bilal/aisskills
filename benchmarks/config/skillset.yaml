@@ -1,0 +1,28 @@
+# 15 instruction-only skills (no scripts). AI Skills classifies skills with scripts as
+# executable-plugin, which instruction routing never activates, so they are excluded from BOTH arms.
+# claude-api was excluded from the first attempt: AI Skills' scanner rejects it ("High-risk content").
+sources:
+  anthropics/skills:
+    url: https://github.com/anthropics/skills
+    commit: 2c5958ecac7cee2b583967a2c4981d0f4a75c579
+    path: skills
+  obra/superpowers:
+    url: https://github.com/obra/superpowers
+    commit: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills
+skills:
+  - { name: academy-guide, source: anthropics/skills }
+  - { name: brand-guidelines, source: anthropics/skills }
+  - { name: internal-comms, source: anthropics/skills }
+  - { name: doc-coauthoring, source: anthropics/skills }
+  - { name: diagnosing-superpowers, source: obra/superpowers }
+  - { name: discernment-nudge, source: anthropics/skills }
+  - { name: dispatching-parallel-agents, source: obra/superpowers }
+  - { name: finishing-a-development-branch, source: obra/superpowers }
+  - { name: receiving-code-review, source: obra/superpowers }
+  - { name: requesting-code-review, source: obra/superpowers }
+  - { name: test-driven-development, source: obra/superpowers }
+  - { name: using-git-worktrees, source: obra/superpowers }
+  - { name: using-superpowers, source: obra/superpowers }
+  - { name: verification-before-completion, source: obra/superpowers }
+  - { name: writing-plans, source: obra/superpowers }

@@ -33,3 +33,15 @@ test('sessions route built-in skills by task without any installed packages',asy
   assert.ok(login.estimatedContextTokens>0&&login.estimatedContextTokens<login.baselineContextTokens);
   assert.ok(!(await planPackageActivation(catalog,root,'what does the parse function return')).builtinSkills.includes('auth-security'));
 });
+
+test('benchmark switch removes built-in skills from routing',async t=>{
+  const {mkdtemp,rm}=await import('node:fs/promises');const {join}=await import('node:path');const {tmpdir}=await import('node:os');
+  const {openPackageCatalog,planPackageActivation}=await import('../packages/core/dist/index.js');
+  const root=await mkdtemp(join(tmpdir(),'aiskills-nobuiltin-'));const previous={h:process.env.AI_SKILLS_HOME,b:process.env.AI_SKILLS_BENCHMARK_NO_BUILTINS};
+  process.env.AI_SKILLS_HOME=join(root,'home');t.after(async()=>{for(const [k,v] of [['AI_SKILLS_HOME',previous.h],['AI_SKILLS_BENCHMARK_NO_BUILTINS',previous.b]]){if(v===undefined)delete process.env[k];else process.env[k]=v;}await rm(root,{recursive:true,force:true});});
+  const catalog=await openPackageCatalog();t.after(()=>catalog.close());
+  const task='add login to my app with secure authentication';
+  assert.ok((await planPackageActivation(catalog,root,task)).builtinSkills.length>0);
+  process.env.AI_SKILLS_BENCHMARK_NO_BUILTINS='1';
+  assert.deepEqual((await planPackageActivation(catalog,root,task)).builtinSkills,[]);
+});

@@ -204,7 +204,9 @@ export async function planPackageActivation(catalog:PackageCatalog, project:stri
   const active=await catalog.active(project);const candidates=[];
   for(const p of active)candidates.push({id:p.id,manifest:p.manifest,estimatedTokens:Math.ceil((await readFile(join(p.directory,'SKILL.md'),'utf8').catch(()=>JSON.stringify(p.manifest))).length/4)});
   const builtins=await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory());
-  for(const m of builtins.list()) candidates.push({id:m.id,manifest:m,estimatedTokens:Math.ceil(JSON.stringify(m).length/4),dependencyOnly:true});
+  // Benchmarks set AI_SKILLS_BENCHMARK_NO_BUILTINS=1 so both arms route the same user-installed skill set.
+  const useBuiltins=process.env.AI_SKILLS_BENCHMARK_NO_BUILTINS!=='1';
+  if(useBuiltins) for(const m of builtins.list()) candidates.push({id:m.id,manifest:m,estimatedTokens:Math.ceil(JSON.stringify(m).length/4),dependencyOnly:true});
   const projectCapabilities:string[]=[];
   try {
     const file=join(project,'package.json');const st=await lstat(file);
@@ -219,7 +221,7 @@ export async function planPackageActivation(catalog:PackageCatalog, project:stri
   const CORE=new Set(['repo-explorer','planner','evidence-first','completion-checker','simplify']);
   const words=new Set(task.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2));
   const specific=routeSkills(analyzeTask(task),compatible).filter(id=>!CORE.has(id)).map(id=>{const m=builtins.get(id);const terms=[...(m?.capabilities??[]),...(m?.activation?.triggers??[]),id.replace(/-/g,' ')].join(' ').toLowerCase().split(/[^a-z0-9]+/);return {id,score:terms.filter(t=>words.has(t)).length};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,3).map(x=>x.id);
-  const builtinSkills=[...new Set([...decision.selected.filter(id=>!!builtins.get(id)),...(specific.length?[...routeSkills(analyzeTask(task),compatible).filter(id=>CORE.has(id)),...specific]:[])])];
+  const builtinSkills=!useBuiltins?[]:[...new Set([...decision.selected.filter(id=>!!builtins.get(id)),...(specific.length?[...routeSkills(analyzeTask(task),compatible).filter(id=>CORE.has(id)),...specific]:[])])];
   const added=builtinSkills.filter(id=>!decision.selected.includes(id)).reduce((sum,id)=>sum+Math.ceil(JSON.stringify(builtins.get(id)).length/4),0);
   const result={task,selectedPackages:decision.selected.filter(id=>!builtins.get(id)),builtinSkills,reasons:decision.reasons,excluded:decision.excluded,estimatedContextTokens:decision.estimatedTokens+added,baselineContextTokens:decision.baselineTokens};
   const {task:ignored,...metadata}=result;
