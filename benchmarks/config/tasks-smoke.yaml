@@ -1,0 +1,15 @@
+# Smoke tier tasks. expect_any: the answer file must contain one of these (case-insensitive).
+# Ground truth verified in the pinned ky commit: Ky.ts withAttemptDefaults timeout = 10_000;
+# utils/normalize.ts retry limit = 2.
+ky-timeout:
+  repo: ky
+  prompt: "In this repository, what is the default request timeout in milliseconds that ky uses when no timeout option is given? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["10000", "10_000"]
+  timeout_seconds: 300
+ky-retry:
+  repo: ky
+  prompt: "In this repository, what is the default maximum number of retries ky uses? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["2"]
+  timeout_seconds: 300
