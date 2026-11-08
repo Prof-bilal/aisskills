@@ -161,6 +161,46 @@ Omit `--allow-capability-execution` for skills-only use; tool calls are then ref
 The four gateway tools carry `anthropic/alwaysLoad`, so Claude Code's own tool
 search keeps them visible.
 
+### Use with Claude Code daily (skills with no extra turns)
+
+The prompt hook routes each prompt and adds only the matching skills to that
+message, so the agent needs no `discover_capabilities`/`load_skill` round trips.
+Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "aiskills hook" }] }]
+  },
+  "sandbox": {
+    "enabled": true,
+    "network": { "allowedDomains": [] },
+    "filesystem": { "denyRead": ["~/.ssh", "~/.aws", "~/.config/gh", "~/.npmrc", ".env", ".env.*"] }
+  },
+  "permissions": {
+    "deny": ["WebFetch", "WebSearch", "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(**/.env)", "Read(**/.env.*)"]
+  }
+}
+```
+
+The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
+text, and no scanner can reliably stop text that tricks a model. The sandbox stops a
+tricked agent from reaching the network, writing outside the project or reading
+secrets. Add hosts to `allowedDomains` only for work that needs them. `aiskills doctor`
+warns when user skills are enabled without the sandbox. `aiskills session` applies these
+limits automatically and also runs Claude Code without shell tools.
+
+### How AI Skills handles untrusted skills
+
+- **Marking:** user-installed skill text reaches the agent inside an
+  `<untrusted-skill>` block with a random boundary and a note that it is reference
+  data, not instructions.
+- **Install triage:** `add --yes` rejects high-risk patterns and holds skills with
+  hidden content (HTML comments, zero-width characters, hidden styling) for review.
+  This is triage, not a guarantee.
+- **Action limits:** the protection that holds when a model is fooled is limiting
+  what it can do: no network, no writes outside the project, no secret reads.
+
 The Smurf bridge uses the local engine for isolated worktrees, parallel lanes,
 review and combined-branch checks. It supports deterministic development workers
 and host-configured OpenAI-compatible API models. API edits pass through exact

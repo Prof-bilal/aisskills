@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Large skill benchmark (Claude Code, claude-haiku-5-5, low effort): 64 skills, 40 tasks.
 //   native64  : all 64 skills installed directly into the project's .claude/skills (no MCP)
+//   hook64    : the same catalog delivered by `aiskills hook` (UserPromptSubmit), no gateway
 //   aiskills64: the same 64 in an AI Skills catalog, enabled for the project, built-in skills off,
 //               reached through the gateway (discover_capabilities -> load_skill)
 // Usage: node benchmarks/run-skills64.mjs --arm=native64|aiskills64 --reps=3 --run=ID [--tasks=a,b]
@@ -96,6 +97,16 @@ for (const [id, task] of Object.entries(tasks)) {
       let flags;
       if (arm === 'native64') {
         await cp(src, join(repo, '.claude', 'skills'), { recursive: true });
+        await writeFile(mcp, JSON.stringify({ mcpServers: {} }));
+        flags = ['--setting-sources', 'project', '--strict-mcp-config', '--mcp-config', mcp];
+      } else if (arm === 'hook64') {
+        // Same catalog as aiskills64, delivered by the prompt hook: no gateway, no extra turns.
+        const home = join(sandbox, 'aiskills-home');
+        await cp(catalog, home, { recursive: true });
+        env.AI_SKILLS_HOME = home;
+        for (const name of await skillNames) await exec('node', [cli, 'skills', 'enable', name], { cwd: repo, env });
+        await mkdir(join(repo, '.claude'), { recursive: true });
+        await writeFile(join(repo, '.claude', 'settings.json'), JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: `${process.execPath} ${cli} hook` }] }] } }));
         await writeFile(mcp, JSON.stringify({ mcpServers: {} }));
         flags = ['--setting-sources', 'project', '--strict-mcp-config', '--mcp-config', mcp];
       } else {
