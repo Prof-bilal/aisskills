@@ -25,7 +25,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: node scripts/benchmark-routing.mjs
-      - run: pnpm -r --filter '!aiskills-workspace' pack --pack-destination ./release
+      - run: pnpm -r --filter '!aiskills-workspace' --filter '!aiskills-landing' pack --pack-destination ./release
       - run: node scripts/verify-release.mjs
       - run: node scripts/smoke-release.mjs
         env:
