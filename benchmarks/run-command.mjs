@@ -58,6 +58,12 @@ function parseCommand(stdout) {
   };
 }
 
+// Same question as the Claude tasks, with the answer returned in the reply instead of a file.
+function commandPrompt(task) {
+  return task.prompt.replace(/Write only[^]*?ANSWER\.txt[^.]*\./, '').trim()
+    + ' Do not create or modify any files. End your reply with a final line of the form "ANSWER: <value>" containing only the value.';
+}
+
 await mkdir(resultsDir, { recursive: true });
 const jsonl = join(resultsDir, 'runs.jsonl');
 
@@ -85,7 +91,7 @@ for (const id of taskIds) {
 
       const started = performance.now();
       const { stdout, stderr, code } = await run('cmd', [
-        '-p', task.prompt,
+        '-p', commandPrompt(task),
         '-m', model,
         '--output-format', 'json',
         '--permission-mode', 'accept-edits',
@@ -96,9 +102,10 @@ for (const id of taskIds) {
       let parsed;
       try { parsed = parseCommand(stdout); } catch (e) { parsed = { parseError: String(e).slice(0, 200), stderr: stderr.slice(0, 300) }; }
 
-      const answer = await readFile(join(repoDir, task.answer_file), 'utf8').catch(() => null);
-      const words = (answer ?? '').toLowerCase().split(/\s+/).filter(Boolean);
-      const pass = answer !== null && words.length > 0 && task.expect_any.some(e => words.includes(String(e).toLowerCase()));
+      // Command Code cannot write files headlessly without --yolo, so its answer comes from the final reply.
+      const match = /^ANSWER:\s*(.+)$/m.exec(parsed.answer ?? '');
+      const value = match ? match[1].replace(/[*`'"]/g, '').trim().toLowerCase() : null;
+      const pass = value !== null && task.expect_any.some(e => value === String(e).toLowerCase());
       const record = { run: runId, task: id, arm, rep, agent: 'command-code', model, effort: null, exitCode: code, wallMs, pass, ...parsed };
       await appendFile(jsonl, JSON.stringify(record) + '\n');
       console.log(`${id} ${arm} rep${rep}: ${pass ? 'PASS' : 'FAIL'} in ${(wallMs / 1000).toFixed(1)}s, ${parsed.inputTokens ?? '?'} in / ${parsed.outputTokens ?? '?'} out tokens`);
