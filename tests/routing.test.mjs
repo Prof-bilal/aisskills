@@ -19,3 +19,16 @@ test('pins cannot bypass compatibility; dependency closure respects budget and c
   assert.throws(()=>evaluateCapabilityRouting('frontend',[candidate('frontend',{dependencies:{skills:['frontend']}})]),/Circular/);
   assert.deepEqual(evaluateCapabilityRouting('other',[candidate('frontend')],{pinned:['frontend']}).selected,['frontend']);
 });
+
+test('sessions route built-in skills by task without any installed packages',async t=>{
+  const {mkdtemp,rm}=await import('node:fs/promises');const {join}=await import('node:path');const {tmpdir}=await import('node:os');
+  const {openPackageCatalog,planPackageActivation}=await import('../packages/core/dist/index.js');
+  const root=await mkdtemp(join(tmpdir(),'aiskills-builtin-routing-'));const previous=process.env.AI_SKILLS_HOME;process.env.AI_SKILLS_HOME=join(root,'home');
+  t.after(async()=>{if(previous===undefined)delete process.env.AI_SKILLS_HOME;else process.env.AI_SKILLS_HOME=previous;await rm(root,{recursive:true,force:true});});
+  const catalog=await openPackageCatalog();t.after(()=>catalog.close());
+  const login=await planPackageActivation(catalog,root,'add login to my app with secure authentication',{agent:'claude'});
+  assert.deepEqual(login.selectedPackages,[]);
+  for(const id of ['auth-security','security-reviewer'])assert.ok(login.builtinSkills.includes(id),id);
+  assert.ok(login.estimatedContextTokens>0&&login.estimatedContextTokens<login.baselineContextTokens);
+  assert.ok(!(await planPackageActivation(catalog,root,'what does the parse function return')).builtinSkills.includes('auth-security'));
+});

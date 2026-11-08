@@ -5,7 +5,7 @@ import { join, resolve, relative, isAbsolute } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parse } from 'yaml';
-import { getConfigPaths, getBuiltInSkillsDirectory, SkillRegistry, parseSkillManifest, scanUntrustedContent } from './index.js';
+import { getConfigPaths, getBuiltInSkillsDirectory, SkillRegistry, parseSkillManifest, scanUntrustedContent, analyzeTask, routeSkills } from './index.js';
 import type { SkillManifest } from './index.js';
 import {evaluateCapabilityRouting} from './routing.js';
 import type {RoutingOptions} from './routing.js';
@@ -213,7 +213,11 @@ export async function planPackageActivation(catalog:PackageCatalog, project:stri
     }}
   }catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
   const decision=evaluateCapabilityRouting(task,candidates,{...options,pinned:await catalog.pins(project),projectCapabilities:[...projectCapabilities,...(options.projectCapabilities??[])]});
-  const result={task,selectedPackages:decision.selected.filter(id=>!builtins.get(id)),builtinSkills:decision.selected.filter(id=>!!builtins.get(id)),reasons:decision.reasons,excluded:decision.excluded,estimatedContextTokens:decision.estimatedTokens,baselineContextTokens:decision.baselineTokens};
+  // Built-ins route by task analysis (as `aiskills plan` does); the matcher above only adds them as dependencies.
+  const compatible=builtins.list().filter(m=>!options.agent||!m.compatible_agents.length||m.compatible_agents.includes(options.agent)).map(m=>m.id);
+  const builtinSkills=[...new Set([...decision.selected.filter(id=>!!builtins.get(id)),...routeSkills(analyzeTask(task),compatible)])];
+  const added=builtinSkills.filter(id=>!decision.selected.includes(id)).reduce((sum,id)=>sum+Math.ceil(JSON.stringify(builtins.get(id)).length/4),0);
+  const result={task,selectedPackages:decision.selected.filter(id=>!builtins.get(id)),builtinSkills,reasons:decision.reasons,excluded:decision.excluded,estimatedContextTokens:decision.estimatedTokens+added,baselineContextTokens:decision.baselineTokens};
   const {task:ignored,...metadata}=result;
   catalog.db.prepare('INSERT INTO routing_events VALUES (?,?,?,?,?)').run(randomUUID(),await realpath(project),createHash('sha256').update(task).digest('hex'),JSON.stringify(metadata),new Date().toISOString());
   // Retain a bounded local history, never raw tasks or credentials.

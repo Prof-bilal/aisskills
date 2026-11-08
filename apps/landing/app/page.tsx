@@ -105,16 +105,16 @@ export default function Home() {
           <div className="hero-note"><span className="status-dot" /> Open source (MIT) · runs locally · public beta on npm</div>
         </div>
 
-        <div className="hero-visual" aria-label="Example: AI Skills picks 3 of 43 skills for a login task">
+        <div className="hero-visual" aria-label="Example: AI Skills picks 7 of 43 skills for a login task">
           <div className="visual-glow" />
           <div className="simple-demo">
             <div className="demo-label">1 · YOU TYPE</div>
             <div className="demo-prompt demo-command"><span className="prompt">$</span> aiskills session --agent=claude &quot;add login to my app&quot;</div>
             <div className="demo-arrow" aria-hidden="true">↓</div>
-            <div className="demo-label">2 · AI SKILLS PICKS 3 OF 43 SKILLS</div>
-            <div className="demo-skills"><span>auth-security</span><span>backend-engineer</span><span>database-architect</span></div>
+            <div className="demo-label">2 · AI SKILLS PICKS 7 OF 43 SKILLS</div>
+            <div className="demo-skills"><span>auth-security</span><span>security-reviewer</span><span>threat-model</span><span>+ 4 core</span></div>
             <div className="demo-arrow" aria-hidden="true">↓</div>
-            <div className="demo-result"><span className="demo-check" aria-hidden="true">✓</span><div><b>Claude Code starts with those 3</b><small>The other 40 stay out of its way until a task needs them</small></div></div>
+            <div className="demo-result"><span className="demo-check" aria-hidden="true">✓</span><div><b>Claude Code starts with those 7</b><small>The other 36 stay out of its way until a task needs them</small></div></div>
             <div className="demo-footnote">Example. Actual picks depend on your task and project.</div>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function Home() {
         <div className="steps">
           <article className="step"><div className="step-number">STEP 01</div><div className="step-visual step-install"><span>$</span><code>npm i -g @prof-bilal/aiskills@beta</code><code>aiskills init --project</code></div><h3>Install and set up</h3><p>One global install, then one setup command in your project. All 43 built-in skills are ready to use.</p></article>
           <article className="step"><div className="step-number">STEP 02</div><div className="step-visual step-install"><span>$</span><code>aiskills session --agent=claude</code><code>&nbsp;&nbsp;&quot;add login to my app&quot;</code></div><h3>Describe the task</h3><p>AI Skills matches your words and your project (for example, Supabase in your dependencies) against your skills.</p></article>
-          <article className="step"><div className="step-number">STEP 03</div><div className="step-visual step-route" aria-hidden="true"><span className="route-node">43 skills</span><i>→</i><span className="route-node route-selected">3 picked</span><i>→</i><span className="route-node">your agent</span></div><h3>Your agent gets to work</h3><p>Claude Code or Codex opens with just those skills. If the task changes, it can look up more as it goes.</p></article>
+          <article className="step"><div className="step-number">STEP 03</div><div className="step-visual step-route" aria-hidden="true"><span className="route-node">43 skills</span><i>→</i><span className="route-node route-selected">7 picked</span><i>→</i><span className="route-node">your agent</span></div><h3>Your agent gets to work</h3><p>Claude Code or Codex opens with just those skills. If the task changes, it can look up more as it goes.</p></article>
         </div>
       </section>
 
