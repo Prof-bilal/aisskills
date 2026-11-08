@@ -64,6 +64,13 @@ for (const id of taskIds) {
     try {
       const repoDir = join(sandbox, 'repo');
       await checkout(repos[task.repo], repoDir);
+      // Arm: which MCP servers Claude Code sees. aiskills-mcp = only AI Skills' gateway, with its own catalog.
+      const cli = join(here, '..', 'packages', 'cli', 'dist', 'index.js');
+      const mcpConfig = join(sandbox, 'mcp.json');
+      const mcpServers = arm === 'aiskills-mcp'
+        ? { aiskills: { command: process.execPath, args: [cli, 'mcp', '--allow-capability-execution'], env: { AI_SKILLS_HOME: join(sandbox, 'aiskills-home'), AI_SKILLS_WARDEN_BINARY: process.env.AI_SKILLS_WARDEN_BINARY ?? 'warden' } } }
+        : {};
+      await writeFile(mcpConfig, JSON.stringify({ mcpServers }));
       const started = performance.now();
       const { stdout, stderr, code } = await run('claude', [
         '-p', task.prompt,
@@ -73,7 +80,7 @@ for (const id of taskIds) {
         '--permission-mode', 'acceptEdits',
         '--allowedTools', 'Read,Write,Edit,Glob,Grep,Bash(git log:*),Bash(git show:*)',
         // Isolate from user settings, hooks, plugins and MCP servers; keep login (CLAUDE_CONFIG_DIR would drop it).
-        '--setting-sources', '', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--disable-slash-commands',
+        '--setting-sources', '', '--strict-mcp-config', '--mcp-config', mcpConfig, '--disable-slash-commands',
       ], { cwd: repoDir, env: { ...process.env }, timeoutMs: (task.timeout_seconds ?? 300) * 1000 });
       const wallMs = Math.round(performance.now() - started);
       let parsed;
