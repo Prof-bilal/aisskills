@@ -178,15 +178,17 @@ Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
     "filesystem": { "denyRead": ["~/.ssh", "~/.aws", "~/.config/gh", "~/.npmrc", ".env", ".env.*"] }
   },
   "permissions": {
-    "deny": ["WebFetch", "WebSearch", "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(**/.env)", "Read(**/.env.*)"]
+    "deny": ["WebFetch", "WebSearch", "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(**/.env)", "Read(**/.env.*)",
+             "Write(//tmp/**)", "Edit(//tmp/**)", "Write(~/.bashrc)", "Write(~/.ssh/**)", "Write(~/.config/**)"]
   }
 }
 ```
 
 The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
 text, and no scanner can reliably stop text that tricks a model. The sandbox stops a
-tricked agent from reaching the network, writing outside the project or reading
-secrets. Add hosts to `allowedDomains` only for work that needs them. `aiskills doctor`
+tricked agent's shell commands from reaching the network, writing outside the project or
+reading secrets. It does not cover Claude Code's file tools, so the `permissions` rules
+block those writes and reads. Add hosts to `allowedDomains` only for work that needs them. `aiskills doctor`
 warns when user skills are enabled without the sandbox. `aiskills session` applies these
 limits automatically and also runs Claude Code without shell tools.
 

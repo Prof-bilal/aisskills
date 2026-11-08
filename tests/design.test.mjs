@@ -42,6 +42,7 @@ test('session with a user skill gets the Rule of Two settings; --allow-network d
     assert.equal(strict.sandboxed,true);
     assert.equal(s.sandbox.enabled,true);assert.deepEqual(s.sandbox.network.allowedDomains,[]);assert.ok(s.sandbox.filesystem.denyRead.includes('~/.ssh'));
     assert.ok(s.permissions.deny.includes('WebFetch'));assert.ok(s.permissions.deny.includes('Read(~/.ssh/**)'));
+    assert.ok(s.permissions.deny.includes('Write(//tmp/**)'));assert.ok(s.permissions.deny.includes('Edit(~/.bashrc)'));
     assert.match(strict.args.at(-1),/<untrusted-skill id="widgets"/);
   }finally{await strict.cleanup();}
   const open=await prepareAgentSession({agent:'claude',task:'review widgets',project:root,cliPath:'/host/aiskills.js',allowNetwork:true});

@@ -18,10 +18,12 @@ const SECRET_PATHS=['~/.ssh','~/.aws','~/.config/gh','~/.npmrc','.env','.env.*']
 /** Rule of Two: once user-installed (untrusted) skill text is in context, a fooled agent must not reach the network or secrets. */
 export function untrustedSkillSettings(allowNetwork=false):Record<string,unknown> {
   const readDeny=['Read(~/.ssh/**)','Read(~/.aws/**)','Read(~/.config/gh/**)','Read(~/.npmrc)','Read(**/.env)','Read(**/.env.*)'];
+  // shortcut: permission rules cannot express "outside the project", so this denies common escape and persistence targets; upgrade if Claude Code adds a project-only write mode.
+  const writeDeny=['//tmp/**','//var/tmp/**','//etc/**','~/.ssh/**','~/.config/**','~/.bashrc','~/.zshrc','~/.profile','~/.bash_profile'].flatMap(p=>[`Edit(${p})`,`Write(${p})`]);
   // The Bash sandbox does not cover Read/WebFetch, so those need permission rules as well.
   return {
     ...(allowNetwork?{}:{sandbox:{enabled:true,failIfUnavailable:true,allowUnsandboxedCommands:false,network:{allowedDomains:[]},filesystem:{denyRead:SECRET_PATHS}}}),
-    permissions:{deny:[...(allowNetwork?[]:['WebFetch','WebSearch']),...readDeny]},
+    permissions:{deny:[...(allowNetwork?[]:['WebFetch','WebSearch']),...readDeny,...writeDeny]},
   };
 }
 type Catalog=Awaited<ReturnType<typeof openPackageCatalog>>;
