@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { analyzeTask, assessGoalRelevance, CoreRuntime, createClaim, getBuiltInSkillsDirectory, getVersion, loadProjectGoals, routeSkills, SkillRegistry, ensureProjectMemoryStore } from 'aiskills-core';
 import type { TaskRequest } from 'aiskills-core';
-import { openPackageCatalog, planPackageActivation } from 'aiskills-core';
+import { openPackageCatalog, planPackageActivation, wrapUntrustedSkill } from 'aiskills-core';
 import {acquireReference,captureBrowserReference,readReferenceScreenshot,readPluginBundle,bundleGuidance} from 'aiskills-core';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -79,7 +79,11 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
         case 'discover_capabilities': {
           if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000) throw new Error('A task of 1–32000 characters is required');
           const catalog=await openPackageCatalog();
-          try { data=await planPackageActivation(catalog,runtime.options.projectRoot,args.task,{agent:options.agent}); } finally {catalog.close();} break;
+          try {
+            const plan=await planPackageActivation(catalog,runtime.options.projectRoot,args.task,{agent:options.agent});
+            // Matches only: the per-skill exclusion list was most of the payload and is not needed to pick a skill.
+            data={selectedPackages:plan.selectedPackages,builtinSkills:plan.builtinSkills,reasons:Object.fromEntries([...plan.selectedPackages,...plan.builtinSkills].map(id=>[id,plan.reasons[id]??[]]))};
+          } finally {catalog.close();} break;
         }
         case 'load_skill': {
           if(typeof args.id!=='string'||args.id.length>128) throw new Error('A skill ID is required');
@@ -94,13 +98,13 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
               const bundle=await readPluginBundle(p.directory);
               if(!bundle)throw new Error('Executable capabilities must use their reviewed Warden launcher');
               if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000)throw new Error('Provide task to select nested plugin guidance');
-              data={id:p.id,digest:p.digest,instructions:await bundleGuidance(p.directory,bundle,args.task),untrusted:true};break;
+              data={id:p.id,digest:p.digest,instructions:(await bundleGuidance(p.directory,bundle,args.task)).map(text=>wrapUntrustedSkill(p.id,text)),untrusted:true};break;
             }
             if(p.manifest.compatible_agents.length && !p.manifest.compatible_agents.some(a=>['codex','claude'].includes(a))) throw new Error('Skill requires a different agent');
             const instructions=await readFile(join(p.directory,'SKILL.md'),'utf8').catch(()=>JSON.stringify(p.manifest));
             const budget=Math.min(p.manifest.context?.budget_tokens??5000,8000)*4;
             if(instructions.length>budget) throw new Error('Skill instructions exceed context budget; split references before loading');
-            data={id:p.id,digest:p.digest,instructions,permissions:p.manifest.requires.permissions};
+            data={id:p.id,digest:p.digest,instructions:wrapUntrustedSkill(p.id,instructions),permissions:p.manifest.requires.permissions};
           } finally {catalog.close();} break;
         }
         case 'inspect_project': data = await runtime.inspectProject(); break;

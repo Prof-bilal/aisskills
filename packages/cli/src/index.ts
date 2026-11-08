@@ -50,7 +50,7 @@ import { serveMcp } from "./mcp.js";
 import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActivation, writePackageLock, updateSkillPackage,resetProjectLock,packageRecoveryReport } from 'aiskills-core';
 import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
-import { prepareAgentSession, runAgentSession } from './session.js';
+import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
 import { collectDiagnostics } from './doctor.js';
 import { acquireReference,captureBrowserReference } from 'aiskills-core';
 
@@ -81,7 +81,8 @@ Commands:
   plan       Create a task plan
   mcp        Serve AI Skills over MCP stdio (4 gateway tools; --full for all tools)
   run        Execute a task
-  session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write]
+  hook       Claude Code UserPromptSubmit hook: adds only the matched skills to the prompt
+  session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write] [--allow-network]
   reference  Save and inspect URL references
   preference Manage candidate and promoted preferences
   verify     Verify a task or claim
@@ -99,8 +100,8 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     const agent=option(argv,'agent')??'codex';
     if(agent!=='codex'&&agent!=='claude') {logger.error('Session agent must be codex or claude');return 2;}
     const task=argv.slice(1).filter(a=>!a.startsWith('--')).join(' ');
-    const options={agent,task,project:process.cwd(),cliPath:fileURLToPath(import.meta.url),print:argv.includes('--print'),write:argv.includes('--write')} as const;
-    try {if(argv.includes('--dry-run')) {const session=await prepareAgentSession(options);try{console.log(JSON.stringify({command:session.command,selected:session.selected,disabledMcp:session.disabledMcp,disabledPlugins:session.disabledPlugins,beforeHooks:session.before.length,afterHooks:session.after.length},null,2));}finally{await session.cleanup();}return 0;}return await runAgentSession(options);}catch(error){logger.error(error instanceof Error?error.message:String(error));return 1;}
+    const options={agent,task,project:process.cwd(),cliPath:fileURLToPath(import.meta.url),print:argv.includes('--print'),write:argv.includes('--write'),allowNetwork:argv.includes('--allow-network')} as const;
+    try {if(argv.includes('--dry-run')) {const session=await prepareAgentSession(options);try{console.log(JSON.stringify({command:session.command,selected:session.selected,sandboxed:session.sandboxed,disabledMcp:session.disabledMcp,disabledPlugins:session.disabledPlugins,beforeHooks:session.before.length,afterHooks:session.after.length},null,2));}finally{await session.cleanup();}return 0;}return await runAgentSession(options);}catch(error){logger.error(error instanceof Error?error.message:String(error));return 1;}
   }
   if (command === 'add' || command === 'install') return manageInstalledSkills([command, ...argv.slice(1)]);
 
@@ -145,6 +146,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     if(allow&&deny){logger.error('Conflicting capability execution options');return 2;}
     await serveMcp(await createLocalRuntime(), detectAgents, {compact:!argv.includes('--full'),agent,...(allow||deny?{allowExecution:allow}:{})}); return 0;
   }
+  if (command === "hook") return promptHook();
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));
   if (command === "goals" || command === "goal") return manageGoals(command, argv.slice(1));
@@ -660,4 +662,28 @@ const invokedPath = process.argv[1];
 const modulePath = fileURLToPath(import.meta.url);
 if (invokedPath && realpathSync(invokedPath) === realpathSync(modulePath)) {
   process.exitCode = await run();
+}
+
+/** Claude Code UserPromptSubmit hook: routes the prompt and adds only matched skill text, with no extra agent turns. */
+async function promptHook(): Promise<number> {
+  let input: { prompt?: unknown; cwd?: unknown };
+  try {
+    const chunks: Buffer[] = []; let size = 0;
+    for await (const chunk of process.stdin) { size += chunk.length; if (size > 1024 * 1024) throw new Error('Hook input exceeds 1 MiB'); chunks.push(chunk as Buffer); }
+    input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) { logger.error(`Invalid hook input: ${error instanceof Error ? error.message : String(error)}`); return 1; }
+  if (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 32000) return 0;
+  const project = typeof input.cwd === 'string' ? input.cwd : process.cwd();
+  const catalog = await openPackageCatalog();
+  try {
+    const plan = await planPackageActivation(catalog, project, input.prompt, { agent: 'claude' });
+    if (!plan.selectedPackages.length && !plan.builtinSkills.length) return 0;
+    const { guidance } = await buildSkillGuidance(catalog, plan, input.prompt, 'claude');
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `Task-selected skill guidance (AI Skills):\n${guidance.join('\n\n')}` } }));
+    return 0;
+  } catch (error) {
+    // Fail open: a routing problem must not block the user's prompt; it only means no guidance this turn.
+    logger.error(`AI Skills hook skipped: ${error instanceof Error ? error.message : String(error)}`);
+    return 0;
+  } finally { catalog.close(); }
 }
