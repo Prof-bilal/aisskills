@@ -18,7 +18,7 @@ for(const live of [false,true])test(`${live?'live Warden':'fixture'} lazy gatewa
   await writeFile(join(source,'SKILL.md'),'---\nname: widget-tools\ndescription: Inspect widget components\n---\nRead widgets.');
   await writeFile(join(source,'runtime.json'),JSON.stringify({kind:'mcp',command:[process.execPath,'${PACKAGE}/server.mjs'],tools:['read']}));
   await writeFile(join(source,'server.mjs'),`import readline from 'node:readline';
-readline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='initialize')result={protocolVersion:'2025-11-25',capabilities:{tools:{}},serverInfo:{name:'widget',version:'1'}};if(r.method==='tools/list')result={tools:[{name:'read',description:'Read widget',inputSchema:{type:'object',properties:{large:{type:'boolean'}}}}]};if(r.method==='tools/call')result={content:[{type:'text',text:r.params.arguments.large?'x'.repeat(300000):'widget result'}]};console.log(JSON.stringify({jsonrpc:'2.0',id:r.id,result}));});`);
+readline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='initialize')result={protocolVersion:'2025-11-25',capabilities:{tools:{}},serverInfo:{name:'widget',version:'1'}};if(r.method==='tools/list')result={tools:[{name:'read',description:'Read widget',inputSchema:{type:'object',properties:{large:{type:'boolean'},medium:{type:'boolean'}}}}]};if(r.method==='tools/call')result={content:[{type:'text',text:r.params.arguments.large?'x'.repeat(300000):r.params.arguments.medium?'m'.repeat(50000):'widget result'}]};console.log(JSON.stringify({jsonrpc:'2.0',id:r.id,result}));});`);
   if(live)process.env.AI_SKILLS_WARDEN_BINARY=process.env.AI_SKILLS_WARDEN_LIVE;
   else {
     const supervisor=join(root,'supervisor.mjs');
@@ -53,10 +53,17 @@ readline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.pa
   const search=async task=>JSON.parse((await client.callTool({name:'search_tools',arguments:{task}})).content[0].text);
   assert.deepEqual((await search('fix unrelated payments')).tools,[]);
   const found=await search('inspect widget components');assert.equal(found.errors.length,0,JSON.stringify(found.errors));assert.equal(found.tools[0].tool,'read');assert.equal(found.tools[0].entry,'default');
+  assert.equal(found.tools[0].inputSchema,undefined);assert.match(found.next,/select/);
+  const selected=JSON.parse((await client.callTool({name:'search_tools',arguments:{task:'inspect widget components',select:[{id:p.id,entry:'default',tool:'read'}]}})).content[0].text);
+  assert.equal(selected.tools.length,1);assert.ok(selected.tools[0].inputSchema.properties.medium);
+  assert.equal((await client.callTool({name:'search_tools',arguments:{task:'inspect widget components',select:[{id:p.id}]}})).isError,true);
   const call=arguments_=>client.callTool({name:'call_capability',arguments:{id:p.id,entry:'default',tool:'read',arguments:{},...arguments_}});
   assert.match(JSON.stringify(await call({})),/widget result/);
   assert.equal((await call({tool:'erase'})).isError,true);
   assert.equal((await call({arguments:{large:true}})).isError,true);
+  const medium=await call({arguments:{medium:true}});const spilled=JSON.parse(medium.content[0].text);
+  assert.equal(spilled.untrusted,true);assert.ok(spilled.bytes>50000);assert.equal(spilled.preview.length,2048);
+  assert.match(await readFile(spilled.saved,'utf8'),/m{50000}/);assert.equal(await readFile(join(root,'.ai','results','.gitignore'),'utf8'),'*\n');
   assert.equal((await call({arguments:'bad'})).isError,true);
   await catalog.enable(p.id,root,false);
   assert.equal((await call({})).isError,true);assert.deepEqual((await search('inspect widget components')).tools,[]);

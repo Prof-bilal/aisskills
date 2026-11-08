@@ -111,6 +111,28 @@ memory; and reproducible release artifacts. Passing a subset is not launch appro
   compatible transitive `body-parser` resolution to 2.4.0, which addresses
   [GHSA-27r3-jxmh-p828](https://github.com/expressjs/body-parser/security/advisories/GHSA-27r3-jxmh-p828).
 
+## 0.2.0-beta.2: smaller MCP context
+
+Claude Code and Codex now defer MCP tool definitions by default, so this release
+targets what they do not reduce: tool results and schema volume, and adoption
+outside `aiskills session`.
+
+- `search_tools` is two-step: ranked names and 200-character descriptions first
+  (at most 20), full input schemas only for up to 10 `select`ed tools.
+- `call_capability` results over 16 KB are saved to `.ai/results/` (git-ignored,
+  mode 0600) and returned as a path, byte count and 2 KB preview. The 256 KiB hard
+  cap is unchanged.
+- **Breaking:** `aiskills mcp` now exposes only the four gateway tools by default.
+  Use `aiskills mcp --full` for project, orchestration and reference tools.
+  `--compact` is still accepted.
+- The four gateway tools carry `_meta["anthropic/alwaysLoad"]` so Claude Code tool
+  search keeps them visible.
+- README documents registering `aiskills mcp` directly with Claude Code or Codex.
+
+Evidence: `tests/broker.test.mjs` (two-step search, `select` validation, 50 KB
+spill to file, 300 KB rejection) and `tests/orchestration.test.mjs` (compact
+default over stdio, `alwaysLoad`, `--full`).
+
 Automated evidence lives in `tests/packages.test.mjs` and the existing runtime,
 MCP, security and orchestration suites. A live GitHub dry-run imported
 `anthropics/skills`, subdirectory `skills/frontend-design`, at commit

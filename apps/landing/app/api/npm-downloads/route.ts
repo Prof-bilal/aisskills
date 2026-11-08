@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const packageName = "@prof-bilal/aiskills";
-const version = "0.2.0-beta.1";
+const version = "0.2.0-beta.2";
 const registryUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
 const downloadsUrl = "https://api.npmjs.org/downloads/point";
 const windowMonths = 17;

@@ -79,7 +79,7 @@ Commands:
   packs      List and manage skill packs
   profile    Create or activate a user profile
   plan       Create a task plan
-  mcp        Serve AI Skills over MCP stdio
+  mcp        Serve AI Skills over MCP stdio (4 gateway tools; --full for all tools)
   run        Execute a task
   session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write]
   reference  Save and inspect URL references
@@ -143,7 +143,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     if(agent!==undefined&&agent!=='codex'&&agent!=='claude'){logger.error('Session agent must be codex or claude');return 2;}
     const allow=argv.includes('--allow-capability-execution'),deny=argv.includes('--deny-capability-execution');
     if(allow&&deny){logger.error('Conflicting capability execution options');return 2;}
-    await serveMcp(await createLocalRuntime(), detectAgents, {compact:argv.includes('--compact'),agent,...(allow||deny?{allowExecution:allow}:{})}); return 0;
+    await serveMcp(await createLocalRuntime(), detectAgents, {compact:!argv.includes('--full'),agent,...(allow||deny?{allowExecution:allow}:{})}); return 0;
   }
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));

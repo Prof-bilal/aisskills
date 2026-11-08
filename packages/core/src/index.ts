@@ -221,7 +221,7 @@ export function createLogger(level: LogLevel = "info"): Logger {
 }
 
 export function getVersion(): string {
-  return "0.2.0-beta.1";
+  return "0.2.0-beta.2";
 }
 
 export type ClaimState = "VERIFIED" | "SUPPORTED" | "LIKELY" | "UNVERIFIED" | "CONTRADICTED" | "UNKNOWN";

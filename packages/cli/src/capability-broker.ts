@@ -1,9 +1,14 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { createHash } from 'node:crypto';
+import { mkdir, realpath, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { openPackageCatalog, planPackageActivation, capabilityLaunches } from 'aiskills-core';
 
 const LIMIT = 256 * 1024;
 const TIMEOUT = 15000;
+const INLINE = 16 * 1024;
+export type ToolRef = { id: string; entry: string; tool: string };
 
 /** No persistent upstream cache: every request observes current host approvals. */
 export class CapabilityBroker {
@@ -42,7 +47,8 @@ export class CapabilityBroker {
     }
   }
 
-  async search(task: string, signal?: AbortSignal) {
+  /** Without `select`: ranked names and short descriptions only. With `select`: full schemas for those tools. */
+  async search(task: string, signal?: AbortSignal, select?: ToolRef[]) {
     signal?.throwIfAborted();
     const catalog = await openPackageCatalog();
     let entries: { id: string; entry: string }[];
@@ -52,13 +58,15 @@ export class CapabilityBroker {
       for (const id of plan.selectedPackages) {
         if (catalog.get(id).kind === 'declarative-skill') continue;
         for (const [entry, launch] of Object.entries(await capabilityLaunches(catalog, id))) {
-          if (launch.args[0] === 'connect') entries.push({ id, entry });
+          if (launch.args[0] === 'connect' && (!select || select.some(s => s.id === id && s.entry === entry))) entries.push({ id, entry });
         }
       }
     } finally { catalog.close(); }
-    const tools: unknown[] = [];
+    const words = new Set(task.toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const found: { item: Record<string, unknown>; score: number }[] = [];
     const errors: { id: string; entry: string; error: string }[] = [];
     let truncated = entries.length > 8;
+    let bytes = 0;
     // Bound both processes launched and tool schemas entering model context.
     for (const { id, entry } of entries.slice(0, 8)) {
       signal?.throwIfAborted();
@@ -66,22 +74,43 @@ export class CapabilityBroker {
         const list = await this.upstream(id, entry, signal, client => client.listTools({}, { timeout: TIMEOUT, signal }));
         if(list.nextCursor || list.tools.length>32)truncated=true;
         for (const tool of list.tools.slice(0, 32)) {
-          const item = { id, entry, tool: tool.name, description: tool.description, inputSchema: tool.inputSchema };
-          if (Buffer.byteLength(JSON.stringify([...tools, item])) > 64000) {truncated=true;break;}
-          tools.push(item);
+          if (select && !select.some(s => s.id === id && s.entry === entry && s.tool === tool.name)) continue;
+          const description = select ? tool.description : tool.description?.slice(0, 200);
+          const item = select ? { id, entry, tool: tool.name, description, inputSchema: tool.inputSchema } : { id, entry, tool: tool.name, description };
+          const size = Buffer.byteLength(JSON.stringify(item));
+          if (bytes + size > 64000) {truncated=true;break;}
+          bytes += size;
+          const text = `${tool.name} ${tool.description ?? ''}`.toLowerCase().split(/\W+/);
+          found.push({ item, score: text.filter(w => words.has(w)).length });
         }
       } catch (error) { errors.push({ id, entry, error: error instanceof Error ? error.message.slice(0, 500) : 'Capability unavailable' }); }
     }
-    return { tools, errors, truncated, untrusted: true };
+    found.sort((a, b) => b.score - a.score);
+    if (!select && found.length > 20) truncated = true;
+    const tools = (select ? found : found.slice(0, 20)).map(f => f.item);
+    return { tools, errors, truncated, untrusted: true, ...(select ? {} : { next: 'Call search_tools again with select=[{id,entry,tool}] to get input schemas before call_capability.' }) };
   }
 
   async call(id: string, entry: string, tool: string, args: Record<string, unknown>, signal?: AbortSignal) {
     if (Buffer.byteLength(JSON.stringify(args)) > 64000) throw new Error('Capability arguments exceed limit');
-    return this.upstream(id, entry, signal, async client => {
+    const result = await this.upstream(id, entry, signal, async client => {
       // Warden independently enforces the reviewed allowlist on tools/call.
       const list = await client.listTools({}, { timeout: TIMEOUT, signal });
       if (!list.tools.some(t => t.name === tool)) throw new Error('Tool is not advertised by the approved gateway');
       return client.callTool({ name: tool, arguments: args }, undefined, { timeout: 60000, signal });
     });
+    const json = JSON.stringify(result);
+    if (Buffer.byteLength(json) <= INLINE) return result;
+    // Large results stay out of model context: save them and return a preview the agent can follow up on.
+    const directory = join(this.project, '.ai', 'results');
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    // A repository could make .ai or .ai/results a symlink; never write outside the project.
+    if (await realpath(directory) !== join(await realpath(this.project), '.ai', 'results')) throw new Error('Result directory must not be a symlink');
+    await writeFile(join(directory, '.gitignore'), '*\n', { flag: 'wx' }).catch(error => { if (error.code !== 'EEXIST') throw error; });
+    const path = join(directory, `${createHash('sha256').update(json).digest('hex').slice(0, 16)}.json`);
+    await writeFile(path, json, { mode: 0o600 });
+    const content = Array.isArray(result.content) ? result.content : [];
+    const text = content.map(c => (c as { type?: string; text?: string }).type === 'text' ? (c as { text: string }).text : '').join('\n');
+    return { content: [{ type: 'text', text: JSON.stringify({ untrusted: true, saved: path, bytes: Buffer.byteLength(json), preview: text.slice(0, 2048) }) }], isError: result.isError === true };
   }
 }

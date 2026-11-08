@@ -145,7 +145,13 @@ test('failed immutable checks cannot be reported complete', { skip: !available }
 test('MCP stdio handshake and project inspection use the CLI server', async t => {
   const { StdioClientTransport } = await import('../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js');
   const client = new Client({ name: 'stdio-fixture', version: '1' });
-  const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp'], stderr: 'pipe' });
+  const compact = new Client({ name: 'stdio-compact', version: '1' });
+  await compact.connect(new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp'], stderr: 'pipe' }));
+  const compactTools = (await compact.listTools()).tools;
+  await compact.close();
+  assert.deepEqual(compactTools.map(t => t.name).sort(), ['call_capability', 'discover_capabilities', 'load_skill', 'search_tools']);
+  assert.ok(compactTools.every(t => t._meta?.['anthropic/alwaysLoad'] === true));
+  const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp', '--full'], stderr: 'pipe' });
   await client.connect(transport);
   t.after(() => client.close());
   assert.ok((await client.listTools()).tools.length >= 8);

@@ -2,14 +2,23 @@
 
 Start the stdio server with `aiskills mcp`. The CLI package contains the server;
 there is one AI Skills installation and one MCP connection. Configure the client's
-command to `aiskills`, arguments `["mcp"]`, and working directory to the target
+command to `aiskills`, arguments `["mcp"]` (or `["mcp", "--full"]` for orchestration tools), and working directory to the target
 project. Alternatively set `projectRoot` in the trusted host runtime file. The
 server fixes its project root at startup; requests cannot change it.
 Stdout is reserved for MCP framing. Node 20+ supports the base server; the optional
 Smurf development bridge needs Node 24.
 
-Tools: `inspect_project`, `recommend_skills`, `plan_task`, `execute_task`,
-`verify_claim`, `verify_task`, `check_goal`, `list_agents`.
+By default the server exposes only the four gateway tools: `discover_capabilities`,
+`load_skill`, `search_tools` and `call_capability`. They are marked
+`anthropic/alwaysLoad` so Claude Code's tool search does not hide them.
+`search_tools` returns ranked tool names first; pass `select` to fetch schemas for
+the chosen tools. `call_capability` results over 16 KB are saved under
+`.ai/results/` and returned as a path plus preview. Add `--allow-capability-execution`
+to permit approved tool calls. See the README section "Use with your agent directly".
+
+Start with `aiskills mcp --full` to also expose: `inspect_project`,
+`recommend_skills`, `plan_task`, `execute_task`, `verify_claim`, `verify_task`,
+`check_goal`, `list_agents`, and the reference tools.
 
 `execute_task` accepts `task`, optional `mode` (`auto`, `single`, `native`,
 `smurf`) and optional `steps`. Each step has `id`, `brief`, exact relative `files`,

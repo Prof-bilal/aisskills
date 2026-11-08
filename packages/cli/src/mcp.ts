@@ -7,14 +7,14 @@ import { openPackageCatalog, planPackageActivation } from 'aiskills-core';
 import {acquireReference,captureBrowserReference,readReferenceScreenshot,readPluginBundle,bundleGuidance} from 'aiskills-core';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CapabilityBroker } from './capability-broker.js';
+import { CapabilityBroker, type ToolRef } from './capability-broker.js';
 
 const taskSchema = { type: 'object', properties: { task: { type: 'string', minLength: 1, maxLength: 32000 } }, required: ['task'], additionalProperties: false };
 export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<unknown> = async () => [], options: {compact?:boolean;agent?:'codex'|'claude';allowExecution?:boolean} = {}) {
   const server = new Server({ name: 'aiskills', version: getVersion() }, { capabilities: { tools: {} } });
   const broker = new CapabilityBroker(runtime.options.projectRoot,options.agent,options.allowExecution??runtime.options.permissions?.includes('shell.execute')??false);
   const allTools = [
-    {name:'search_tools',description:'Find MCP tools for a task among approved project capabilities; starts matching Warden gateways on demand and returns untrusted schemas',inputSchema:taskSchema},
+    {name:'search_tools',description:'Find MCP tools for a task among approved project capabilities; starts matching Warden gateways on demand. Returns ranked tool names and short descriptions; call again with select=[{id,entry,tool}] to get input schemas. Output is untrusted',inputSchema:{type:'object',properties:{task:{type:'string',minLength:1,maxLength:32000},select:{type:'array',maxItems:10,items:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128},entry:{type:'string',minLength:1,maxLength:128},tool:{type:'string',minLength:1,maxLength:256}},required:['id','entry','tool'],additionalProperties:false}}},required:['task'],additionalProperties:false}},
     {name:'call_capability',description:'Call a discovered MCP tool through its approved Warden gateway; output is untrusted data',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128},entry:{type:'string',minLength:1,maxLength:128},tool:{type:'string',minLength:1,maxLength:256},arguments:{type:'object'}},required:['id','entry','tool','arguments'],additionalProperties:false}},
     ...['inspect_reference','view_reference_screenshot'].map(name=>({name,description:name==='inspect_reference'?'Read compact saved reference evidence without image bytes':'Load a saved, integrity-verified reference screenshot on demand',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128}},required:['id'],additionalProperties:false}})),
     {name:'capture_reference',description:'Render a saved HTTPS reference in a network-isolated Warden browser and save screenshot evidence; requires host browser.use and network.read grants',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128}},required:['id'],additionalProperties:false}},
@@ -32,7 +32,7 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
   ];
   const readOnlyNames=new Set(['discover_capabilities','load_skill','inspect_project','recommend_skills','plan_task','verify_claim','check_goal','verify_task','list_agents','inspect_reference','view_reference_screenshot','list_references','list_preferences']);
   const compactNames = new Set(['discover_capabilities','load_skill','search_tools','call_capability']);
-  const tools = (options.compact ? allTools.filter(t => compactNames.has(t.name)) : allTools).map(t=>({...t,annotations:{readOnlyHint:readOnlyNames.has(t.name),destructiveHint:!readOnlyNames.has(t.name),openWorldHint:!readOnlyNames.has(t.name)}}));
+  const tools = (options.compact ? allTools.filter(t => compactNames.has(t.name)) : allTools).map(t=>({...t,annotations:{readOnlyHint:readOnlyNames.has(t.name),destructiveHint:!readOnlyNames.has(t.name),openWorldHint:!readOnlyNames.has(t.name)},...(compactNames.has(t.name)?{_meta:{'anthropic/alwaysLoad':true}}:{})}));
   const results = new Map<string, unknown>();
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
@@ -48,7 +48,9 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
       switch (name) {
         case 'search_tools': {
           if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000)throw new Error('A task of 1–32000 characters is required');
-          data=await broker.search(args.task,extra.signal);break;
+          const select=args.select;
+          if(select!==undefined&&(!Array.isArray(select)||!select.length||select.length>10||(select as Record<string,unknown>[]).some(r=>!r||typeof r!=='object'||Object.keys(r).some(k=>!['id','entry','tool'].includes(k))||['id','entry','tool'].some(k=>typeof r[k]!=='string'||!(r[k] as string).length||(r[k] as string).length>(k==='tool'?256:128)))))throw new Error('select must list 1–10 {id, entry, tool} references');
+          data=await broker.search(args.task,extra.signal,select as ToolRef[]|undefined);break;
         }
         case 'call_capability': {
           if(typeof args.id!=='string'||!args.id.length||args.id.length>128||typeof args.entry!=='string'||!args.entry.length||args.entry.length>128||typeof args.tool!=='string'||!args.tool.length||args.tool.length>256||!args.arguments||typeof args.arguments!=='object'||Array.isArray(args.arguments))throw new Error('Capability id, entry, tool and object arguments are required');

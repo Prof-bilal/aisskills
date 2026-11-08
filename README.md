@@ -6,7 +6,7 @@ It is designed to work with coding agents already installed on your machine.
 
 ## Status
 
-`0.2.0-beta.1` is publicly available on npm under the `beta` channel. The
+`0.2.0-beta.2` is publicly available on npm under the `beta` channel. The
 packages are built, tested, audited, and verified through a clean install of
 the published CLI.
 
@@ -31,7 +31,7 @@ The runtime follows this flow:
    enter the initial context.
 4. The session exposes compact metadata tools. `discover_capabilities` and
    `load_skill` are available immediately; `search_tools` starts only matching
-   approved MCP gateways, and `call_capability` opens a Warden-protected
+   approved MCP gateways and returns tool names before schemas, and `call_capability` opens a Warden-protected
    connection only for the requested call.
 5. Every executable call rechecks project activation, snapshot integrity,
    compatibility, reviewed policy hashes, and Warden enforcement. Tool schemas
@@ -132,10 +132,34 @@ policy.
 
 ## MCP and orchestration
 
-Start the MCP stdio server with `aiskills mcp` from the target repository. It
-exposes project inspection, skill recommendations, planning, execution, claim and
+Start the MCP stdio server with `aiskills mcp` from the target repository. By
+default it exposes only the four gateway tools described below. `aiskills mcp --full`
+also exposes project inspection, skill recommendations, planning, execution, claim and
 run verification, goal checks and agent discovery through the same core used by
 `aiskills run`. Native worker output remains unverified until independently checked.
+
+### Use with your agent directly
+
+You do not need `aiskills session` to get on-demand tools. Register AI Skills as
+the agent's MCP server, and add your other MCP servers to AI Skills instead of to
+the agent (`aiskills install`, `skills prepare --yes`, `skills enable`). They then
+stay stopped until a task needs them.
+
+```bash
+# Claude Code
+claude mcp add aiskills -- aiskills mcp --allow-capability-execution
+```
+
+```toml
+# Codex: ~/.codex/config.toml
+[mcp_servers.aiskills]
+command = "aiskills"
+args = ["mcp", "--allow-capability-execution"]
+```
+
+Omit `--allow-capability-execution` for skills-only use; tool calls are then refused.
+The four gateway tools carry `anthropic/alwaysLoad`, so Claude Code's own tool
+search keeps them visible.
 
 The Smurf bridge uses the local engine for isolated worktrees, parallel lanes,
 review and combined-branch checks. It supports deterministic development workers
@@ -308,15 +332,20 @@ The heuristic scanner cannot prove
 instructions safe; review and runtime permissions remain necessary.
 
 The AI Skills MCP server exposes `discover_capabilities` (compact task matches),
-`load_skill` (instructions on demand), `search_tools` (matching gateway schemas)
+`load_skill` (instructions on demand), `search_tools` (matching gateway tools)
 and `call_capability` (a reviewed tool call). `load_skill` supports built-ins and
 approved enabled project skills, including task-selected nested plugin guidance.
 Loading verifies installed snapshots and enforces context budgets. Tool discovery
-starts at most eight matching gateways and returns at most 64 KB of schemas;
-calls accept at most 64 KB of arguments and return at most 256 KiB. Tool names
-must be advertised by the approved gateway; Warden enforces the reviewed allowlist.
-`mcp --compact` exposes only these four tools; the default MCP server also exposes
-project, orchestration and reference tools. Remote callers cannot install packages
+starts at most eight matching gateways and works in two steps: `search_tools` first
+returns up to 20 tool names with short descriptions, ranked against the task, then
+`search_tools` with `select` (up to 10 `{id, entry, tool}` references) returns full
+input schemas for only those tools, within 64 KB. Calls accept at most 64 KB of
+arguments. Results up to 16 KB return inline; larger results up to 256 KiB are saved
+under `.ai/results/` (git-ignored) and the call returns the file path plus a 2 KB
+preview. Tool names must be advertised by the approved gateway; Warden enforces the
+reviewed allowlist. `mcp` exposes only these four tools by default (`--compact` is
+accepted for compatibility); `mcp --full` also exposes project, orchestration and
+reference tools. Remote callers cannot install packages
 or approve permissions. Upstreams are closed after each request, so stateful MCP
 servers that depend on connection-local state require a different integration.
 
