@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const resultsRoot = join(here, 'results');
 const runs = [];
 for (const dir of await readdir(resultsRoot, { withFileTypes: true }).catch(() => [])) {
-  if (!dir.isDirectory()) continue;
+  if (!dir.isDirectory() || dir.name.startsWith('dev-')) continue; // dev-* are development checks, not benchmark runs
   const file = join(resultsRoot, dir.name, 'runs.jsonl');
   const text = await readFile(file, 'utf8').catch(() => '');
   for (const line of text.split('\n').filter(Boolean)) runs.push(JSON.parse(line));

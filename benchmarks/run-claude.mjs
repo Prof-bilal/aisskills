@@ -16,7 +16,7 @@ const reps = Number(arg('reps', '1'));
 const runId = arg('run', new Date().toISOString().replace(/[:.]/g, '-'));
 const resultsDir = join(here, 'results', runId);
 const repos = YAML.parse(await readFile(join(here, 'config', 'repos.yaml'), 'utf8'));
-const tasks = YAML.parse(await readFile(join(here, 'config', 'tasks-smoke.yaml'), 'utf8'));
+const tasks = YAML.parse(await readFile(join(here, 'config', 'tasks.yaml'), 'utf8'));
 
 function run(cmd, args, options) {
   return new Promise((resolve, reject) => {

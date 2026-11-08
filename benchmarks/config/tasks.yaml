@@ -1,0 +1,75 @@
+# Smoke tier tasks. expect_any: the answer file must contain one of these (case-insensitive).
+# Ground truth verified in the pinned ky commit: Ky.ts withAttemptDefaults timeout = 10_000;
+# utils/normalize.ts retry limit = 2.
+ky-timeout:
+  repo: ky
+  prompt: "In this repository, what is the default request timeout in milliseconds that ky uses when no timeout option is given? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["10000", "10_000"]
+  timeout_seconds: 300
+ky-retry:
+  repo: ky
+  prompt: "In this repository, what is the default maximum number of retries ky uses? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["2"]
+  timeout_seconds: 300
+ky-timeout-file:
+  repo: ky
+  prompt: "Which file in the source/utils directory implements request timeout handling? Write only the file name (for example foo.ts) to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["timeout.ts"]
+  timeout_seconds: 300
+express-port:
+  repo: express-boilerplate
+  prompt: "What port does this Express server listen on when the PORT environment variable is not set? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["3000"]
+  timeout_seconds: 300
+express-token-minutes:
+  repo: express-boilerplate
+  prompt: "After how many minutes do access tokens expire by default in this project? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["30"]
+  timeout_seconds: 300
+express-bcrypt-rounds:
+  repo: express-boilerplate
+  prompt: "How many salt rounds does this project use when hashing user passwords with bcrypt? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["8"]
+  timeout_seconds: 300
+express-limiter-file:
+  repo: express-boilerplate
+  prompt: "Which file exports the authLimiter middleware? Write only the file name (for example foo.js) to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["rateLimiter.js"]
+  timeout_seconds: 300
+nextjs-trial-min-days:
+  repo: nextjs-payments
+  prompt: "What is the smallest trial period in days that calculateTrialEndUnixTimestamp accepts, below which it returns undefined? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["2"]
+  timeout_seconds: 300
+nextjs-checkout-function: 
+  repo: nextjs-payments
+  prompt: "Which exported async function in utils/stripe/server.ts starts a Stripe checkout session? Write only the function name to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["checkoutWithStripe"]
+  timeout_seconds: 300
+fastapi-token-minutes:
+  repo: fastapi-fullstack
+  prompt: "What is the default ACCESS_TOKEN_EXPIRE_MINUTES value in the backend settings? Write only the number to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["11520"]
+  timeout_seconds: 300
+fastapi-jwt-algorithm:
+  repo: fastapi-fullstack
+  prompt: "Which JWT signing algorithm does the backend use for access tokens? Write only the algorithm name to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["HS256"]
+  timeout_seconds: 300
+fastapi-hash-function: 
+  repo: fastapi-fullstack
+  prompt: "Which function in backend/app/core/security.py hashes a plain password? Write only the function name to ANSWER.txt in the repository root."
+  answer_file: ANSWER.txt
+  expect_any: ["get_password_hash"]
+  timeout_seconds: 300
