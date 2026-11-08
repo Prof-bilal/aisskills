@@ -33,19 +33,27 @@ Bytes are exact; tokens are chars/4 estimates; timings are machine-dependent med
 
 | Setup | Servers | Tools | Ready in | Memory |
 | --- | --- | --- | --- | --- |
-| All servers upfront | 9 | 220 | 93 ms | 481 MB |
-| AI Skills | 1 | 4 | 320 ms | 90 MB |
+| All servers upfront | 9 | 220 | 113 ms | 481 MB |
+| AI Skills | 1 | 4 | 390 ms | 89 MB |
 
-Cost AI Skills pays instead: each tool call starts its gateway, about **166 ms** per call here (more with the real Warden sandbox).
+Cost AI Skills pays instead: each tool call starts its gateway, about **171 ms** per call here (more with the real Warden sandbox).
 
 ## 5. Built-in skill routing
 
-42 labelled tasks. Precision 0.32, recall 0.825, 3 clearly wrong picks. Average selected guidance ~757 tok vs ~6439 tok for all 43 skills.
+42 labelled tasks. Precision 0.556, recall 0.625, 0 clearly wrong picks. Average selected guidance ~444 tok vs ~6439 tok for all 43 skills.
 
-- missed: "add secure password reset to the signup flow" expected auth-security; got security-reviewer, threat-model, secrets-review
-- missed: "audit npm dependencies for known vulnerabilities" expected dependency-security; got security-reviewer, threat-model
-- missed: "should we build our own auth or buy a service" expected build-vs-buy; got security-reviewer, threat-model, auth-security, frontend-engineer, ui-designer, backend-engineer, fullstack-engineer
-- missed: "validate this startup idea for a dog walking marketplace" expected startup-validator, idea-validator; got input-validation, product-engineer, idea-validator, feature-prioritizer
+- missed: "add login to my app" expected auth-security; got nothing task-specific
+- missed: "add secure password reset to the signup flow" expected auth-security; got nothing task-specific
+- missed: "check API keys are not committed and rotate exposed credentials" expected secrets-review; got api-security, backend-engineer
+- missed: "audit npm dependencies for known vulnerabilities" expected dependency-security; got nothing task-specific
+- missed: "do a full security review of this repository" expected security-reviewer, threat-model; got security-reviewer
+- missed: "make the landing page responsive on mobile" expected frontend-engineer; got ui-designer
+- missed: "redesign the dashboard UI with better spacing and typography" expected ui-designer; got nothing task-specific
+- missed: "build a React settings page with a form" expected frontend-engineer; got nothing task-specific
+- missed: "add a REST endpoint that returns paginated orders" expected backend-engineer; got nothing task-specific
+- missed: "build a full stack todo feature with API and UI" expected fullstack-engineer; got api-security, backend-engineer
+- missed: "should we build our own auth or buy a service" expected build-vs-buy; got auth-security, backend-engineer
+- missed: "validate this startup idea for a dog walking marketplace" expected startup-validator, idea-validator; got idea-validator
 - missed: "simplify this overly complex module" expected simplify; got nothing task-specific
-- missed: "write the README and API documentation" expected technical-writer; got backend-engineer, fullstack-engineer, api-security
+- missed: "write the README and API documentation" expected technical-writer; got api-security, backend-engineer
 - missed: "challenge my plan and find the weak points" expected devil-advocate; got nothing task-specific

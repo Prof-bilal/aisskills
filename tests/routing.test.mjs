@@ -28,7 +28,8 @@ test('sessions route built-in skills by task without any installed packages',asy
   const catalog=await openPackageCatalog();t.after(()=>catalog.close());
   const login=await planPackageActivation(catalog,root,'add login to my app with secure authentication',{agent:'claude'});
   assert.deepEqual(login.selectedPackages,[]);
-  for(const id of ['auth-security','security-reviewer'])assert.ok(login.builtinSkills.includes(id),id);
+  assert.ok(login.builtinSkills.includes('auth-security'));
+  assert.ok(login.builtinSkills.filter(id=>!['repo-explorer','planner','evidence-first','completion-checker','simplify'].includes(id)).length<=3);
   assert.ok(login.estimatedContextTokens>0&&login.estimatedContextTokens<login.baselineContextTokens);
   assert.ok(!(await planPackageActivation(catalog,root,'what does the parse function return')).builtinSkills.includes('auth-security'));
 });

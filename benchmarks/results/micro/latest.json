@@ -86,37 +86,50 @@
     }
   ],
   "startup": {
-    "coldCallMs": 166,
+    "coldCallMs": 171,
     "native": {
       "servers": 9,
       "tools": 220,
-      "readyMs": 93,
+      "readyMs": 113,
       "rssMb": 481
     },
     "aiskills": {
       "servers": 1,
       "tools": 4,
-      "readyMs": 320,
-      "rssMb": 90
+      "readyMs": 390,
+      "rssMb": 89
     }
   },
   "routing": {
     "tasks": 42,
-    "precision": 0.32,
-    "recall": 0.825,
-    "wrongPicks": 3,
-    "avgSelectedTokens": 757,
+    "precision": 0.556,
+    "recall": 0.625,
+    "wrongPicks": 0,
+    "avgSelectedTokens": 444,
     "allSkillsTokens": 6439,
     "misses": [
+      {
+        "task": "add login to my app",
+        "expected": [
+          "auth-security"
+        ],
+        "got": []
+      },
       {
         "task": "add secure password reset to the signup flow",
         "expected": [
           "auth-security"
         ],
-        "got": [
-          "security-reviewer",
-          "threat-model",
+        "got": []
+      },
+      {
+        "task": "check API keys are not committed and rotate exposed credentials",
+        "expected": [
           "secrets-review"
+        ],
+        "got": [
+          "api-security",
+          "backend-engineer"
         ]
       },
       {
@@ -124,9 +137,56 @@
         "expected": [
           "dependency-security"
         ],
-        "got": [
+        "got": []
+      },
+      {
+        "task": "do a full security review of this repository",
+        "expected": [
           "security-reviewer",
           "threat-model"
+        ],
+        "got": [
+          "security-reviewer"
+        ]
+      },
+      {
+        "task": "make the landing page responsive on mobile",
+        "expected": [
+          "frontend-engineer"
+        ],
+        "got": [
+          "ui-designer"
+        ]
+      },
+      {
+        "task": "redesign the dashboard UI with better spacing and typography",
+        "expected": [
+          "ui-designer"
+        ],
+        "got": []
+      },
+      {
+        "task": "build a React settings page with a form",
+        "expected": [
+          "frontend-engineer"
+        ],
+        "got": []
+      },
+      {
+        "task": "add a REST endpoint that returns paginated orders",
+        "expected": [
+          "backend-engineer"
+        ],
+        "got": []
+      },
+      {
+        "task": "build a full stack todo feature with API and UI",
+        "expected": [
+          "fullstack-engineer"
+        ],
+        "got": [
+          "api-security",
+          "backend-engineer"
         ]
       },
       {
@@ -135,13 +195,8 @@
           "build-vs-buy"
         ],
         "got": [
-          "security-reviewer",
-          "threat-model",
           "auth-security",
-          "frontend-engineer",
-          "ui-designer",
-          "backend-engineer",
-          "fullstack-engineer"
+          "backend-engineer"
         ]
       },
       {
@@ -151,10 +206,7 @@
           "idea-validator"
         ],
         "got": [
-          "input-validation",
-          "product-engineer",
-          "idea-validator",
-          "feature-prioritizer"
+          "idea-validator"
         ]
       },
       {
@@ -170,9 +222,8 @@
           "technical-writer"
         ],
         "got": [
-          "backend-engineer",
-          "fullstack-engineer",
-          "api-security"
+          "api-security",
+          "backend-engineer"
         ]
       },
       {

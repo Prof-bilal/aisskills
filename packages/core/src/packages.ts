@@ -215,7 +215,11 @@ export async function planPackageActivation(catalog:PackageCatalog, project:stri
   const decision=evaluateCapabilityRouting(task,candidates,{...options,pinned:await catalog.pins(project),projectCapabilities:[...projectCapabilities,...(options.projectCapabilities??[])]});
   // Built-ins route by task analysis (as `aiskills plan` does); the matcher above only adds them as dependencies.
   const compatible=builtins.list().filter(m=>!options.agent||!m.compatible_agents.length||m.compatible_agents.includes(options.agent)).map(m=>m.id);
-  const builtinSkills=[...new Set([...decision.selected.filter(id=>!!builtins.get(id)),...routeSkills(analyzeTask(task),compatible)])];
+  // Keep the few task-specific built-ins that actually match the task's words; core skills only accompany a specific match.
+  const CORE=new Set(['repo-explorer','planner','evidence-first','completion-checker','simplify']);
+  const words=new Set(task.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2));
+  const specific=routeSkills(analyzeTask(task),compatible).filter(id=>!CORE.has(id)).map(id=>{const m=builtins.get(id);const terms=[...(m?.capabilities??[]),...(m?.activation?.triggers??[]),id.replace(/-/g,' ')].join(' ').toLowerCase().split(/[^a-z0-9]+/);return {id,score:terms.filter(t=>words.has(t)).length};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,3).map(x=>x.id);
+  const builtinSkills=[...new Set([...decision.selected.filter(id=>!!builtins.get(id)),...(specific.length?[...routeSkills(analyzeTask(task),compatible).filter(id=>CORE.has(id)),...specific]:[])])];
   const added=builtinSkills.filter(id=>!decision.selected.includes(id)).reduce((sum,id)=>sum+Math.ceil(JSON.stringify(builtins.get(id)).length/4),0);
   const result={task,selectedPackages:decision.selected.filter(id=>!builtins.get(id)),builtinSkills,reasons:decision.reasons,excluded:decision.excluded,estimatedContextTokens:decision.estimatedTokens+added,baselineContextTokens:decision.baselineTokens};
   const {task:ignored,...metadata}=result;
