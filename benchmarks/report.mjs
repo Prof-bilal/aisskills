@@ -22,7 +22,7 @@ const money = v => (v === null || v === undefined ? 'n/a' : `$${Number(v).toFixe
 
 const groups = new Map();
 for (const r of runs) {
-  const key = `${r.agent} | ${r.model ?? 'model n/a'} | ${r.arm}`;
+  const key = `${r.agent} / ${r.model ?? "model n/a"} / ${r.arm}`;
   if (!groups.has(key)) groups.set(key, []);
   groups.get(key).push(r);
 }
