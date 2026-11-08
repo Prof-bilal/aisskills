@@ -27,7 +27,7 @@ kilo:
   version: 7.8.27
   install: npm i -g @kilocode/cli
   headless: [run, --format, json, --auto]
-  model: [--model, "kilo/kilo-auto/free"]   # TODO: pick one fixed free model; kilo-auto may switch models
+  model: [--model, "kilo/nvidia/nemotron-3.5-lightning:free"]   # fixed free model; kilo-auto switches models between runs
   usage: "`kilo stats` / `kilo export` after the run (confirmed during adapter work)"
   mcp: { method: config, file: "$XDG_CONFIG_HOME/kilo/kilo.jsonc", key: mcp }
   isolate: { env: XDG_CONFIG_HOME }
