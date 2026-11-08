@@ -1,0 +1,17 @@
+# Pinned 2026-11-08. Each run starts from a clean clone at `commit`.
+nextjs-payments:
+  url: https://github.com/vercel/nextjs-subscription-payments
+  commit: bdd0813206e47e6b218d42f15a7976c8a0d3c3eb
+  stack: Next.js + Supabase + Stripe
+fastapi-fullstack:
+  url: https://github.com/fastapi/full-stack-fastapi-template
+  commit: aabb90126964a164e02aff39e7c385bb0598236d
+  stack: Python + Postgres + React
+express-boilerplate:
+  url: https://github.com/hagopj13/node-express-boilerplate
+  commit: 179ae84efec61b14206d0305d941daed6c6d07f9
+  stack: Express + Mongo + JWT
+ky:
+  url: https://github.com/sindresorhus/ky
+  commit: 3541888878c4d303a8bc2ad61815f4e048f55a5d
+  stack: TypeScript library (control)
