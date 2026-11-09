@@ -141,6 +141,18 @@ export function parseGitHubSource(source: string): string {
   return url.toString().replace(/\/$/, '');
 }
 /** Remote sources never auto-approve; hidden content always needs a human look, even with --yes. */
+/** Frontmatter access is default-deny: only explicit, well-typed hosts and a secrets flag are honoured. */
+export function sanitizeAccess(value:unknown):{network:string[];secrets:boolean}{
+  const v=(value&&typeof value==='object')?value as Record<string,unknown>:{};
+  const hosts=Array.isArray(v.network)?v.network.filter((h):h is string=>typeof h==='string'&&/^[a-z0-9.-]{1,253}$/i.test(h)).map(h=>h.toLowerCase()):[];
+  return {network:hosts,secrets:v.secrets===true};
+}
+/** Union of what the enabled skills for this project declare. Enabled skills only; the guard uses it. */
+export async function declaredAccess(catalog:PackageCatalog,project:string):Promise<{network:Set<string>;secrets:boolean}>{
+  const out={network:new Set<string>(),secrets:false};
+  for(const p of await catalog.active(project)){const a=sanitizeAccess((p.manifest as {access?:unknown}).access);a.network.forEach(h=>out.network.add(h));if(a.secrets)out.secrets=true;}
+  return out;
+}
 export function approvalStatus(options:Pick<InstallOptions,'approve'|'remote'>,findings:{summary:string}[]):'approved'|'review-required'{
   return options.approve&&!options.remote&&!findings.some(f=>f.summary===HIDDEN_CONTENT)?'approved':'review-required';
 }
@@ -180,7 +192,7 @@ export async function installSkillPackage(catalog: PackageCatalog, options: Inst
       const md = scan.files.get('SKILL.md')?.toString(); const match = md?.match(/^---\r?\n([\s\S]*?)\r?\n---/);
       if (!match) throw new Error('Package requires skill.yaml or SKILL.md with name and description frontmatter');
       const data = parse(match[1]);
-      manifest = parseSkillManifest(JSON.stringify({schema_version:1,id:data.name,name:data.name,description:data.description,version:'0.0.0',category:'user',capabilities:data.capabilities??[],activation:data.activation,compatible_agents:data.compatible_agents??[],context:data.context,requires:{permissions:['repository.read']},recommended_tools:[],dependencies:data.dependencies??{skills:[]},checks:[],risk_level:'low'}));
+      manifest = parseSkillManifest(JSON.stringify({schema_version:1,id:data.name,name:data.name,description:data.description,version:'0.0.0',category:'user',capabilities:data.capabilities??[],activation:data.activation,compatible_agents:data.compatible_agents??[],context:data.context,requires:{permissions:['repository.read']},access:sanitizeAccess(data.access),recommended_tools:[],dependencies:data.dependencies??{skills:[]},checks:[],risk_level:'low'}));
     }
     const p: InstalledSkillPackage = {id:manifest.id,digest:scan.digest,source,commit,requestedRef:options.ref,subdirectory:options.subdirectory,manifest,kind:scan.executable||bundle?'executable-plugin':'declarative-skill',findings:scan.findings,status:approvalStatus(options,scan.findings),directory:join(catalog.root,'packages',scan.digest),installedAt:new Date().toISOString()};
     if (options.approve && scan.findings.some(f => f.severity === 'high' || f.severity === 'blocker')) throw new Error('High-risk content requires remediation before approval');

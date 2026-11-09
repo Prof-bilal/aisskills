@@ -1,6 +1,8 @@
 import { resolve, relative, isAbsolute } from 'node:path';
 
-export interface GuardCall { tool: string; input: Record<string, unknown>; cwd: string; home: string; allowHosts: string[] }
+export interface GuardCall { tool: string; input: Record<string, unknown>; cwd: string; home: string; allowHosts: string[]; secretsAllowed?: boolean }
+/** Secret locations are denied unless an enabled skill declares `access.secrets: true`. */
+const secretHit=(path:string,call:GuardCall)=>!call.secretsAllowed&&SECRET.test(path);
 
 const SECRET = /(^|\/)(\.ssh|\.aws|\.gnupg|\.config\/gh|\.npmrc|\.netrc|\.docker\/config\.json|id_rsa|id_ed25519)(\/|$)|(^|\/)\.env(?!\.(example|sample|template)$)(\.[\w-]+)?$/;
 // A client counts only in command position (start, after ; & | ( ` $( or env/xargs/time), so "fix curl bug" in a commit message is not a network call.
@@ -108,7 +110,7 @@ function bashReason(command: string, call: GuardCall): string | null {
   for (const token of command.split(/[\s;&|<>()`'"]+/)) {
     if (!token) continue;
     const t = expand(token, call.home);
-    if (SECRET.test(t) || SECRET.test(resolve(call.cwd, t))) return 'commands that touch secret files are blocked';
+    if (secretHit(t,call) || secretHit(resolve(call.cwd, t),call)) return 'commands that touch secret files are blocked';
   }
   for (const m of command.matchAll(/>>?\s*([^\s;&|<>]+)/g)) if (outsideWrite(m[1], call)) return 'writing outside the project is blocked';
   for (const part of command.split(/[;&|]+/)) {
@@ -133,13 +135,13 @@ export function evaluateGuard(call: GuardCall): string | null {
     const file = typeof input.file_path === 'string' ? input.file_path : typeof input.notebook_path === 'string' ? input.notebook_path : null;
     if (!file) return null;
     const path = resolvePath(file, call);
-    if (SECRET.test(path)) return 'secret files are blocked while user-installed skills are active';
+    if (secretHit(path,call)) return 'secret files are blocked while user-installed skills are active';
     if (tool !== 'Read' && !inside(path, call.cwd)) return 'writing outside the project is blocked';
     return null;
   }
   if (tool === 'Glob' || tool === 'Grep') {
     const path = typeof input.path === 'string' ? resolvePath(input.path, call) : null;
-    return path && SECRET.test(path) ? 'secret locations are blocked while user-installed skills are active' : null;
+    return path && secretHit(path,call) ? 'secret locations are blocked while user-installed skills are active' : null;
   }
   if (tool === 'WebFetch') {
     const host = typeof input.url === 'string' ? hostOf(input.url) : null;

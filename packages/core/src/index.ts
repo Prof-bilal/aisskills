@@ -751,6 +751,8 @@ export interface SkillManifest {
     permissions: string[];
   };
   recommended_tools: string[];
+  /** Declared, default-deny access: what the skill may reach. Absent means nothing. */
+  access?: { network?: string[]; secrets?: boolean };
   compatible_agents: string[];
   dependencies: {
     skills: string[];

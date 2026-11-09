@@ -52,6 +52,7 @@ import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
 import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
 import { evaluateGuard } from './guard.js';
+import { declaredAccess } from 'aiskills-core';
 import { homedir } from 'node:os';
 import { collectDiagnostics } from './doctor.js';
 import { acquireReference,captureBrowserReference } from 'aiskills-core';
@@ -706,9 +707,11 @@ async function guardHook(args: string[]): Promise<number> {
   let userSkills = 0;
   try { userSkills = (await catalog.active(cwd)).length; } catch { userSkills = 1; /* cannot read the catalog: stay protective */ } finally { catalog.close(); }
   if (!userSkills) return 0;
-  const allowHosts = args.filter(a => a.startsWith('--allow-host=')).map(a => a.slice(13).toLowerCase());
+  // Default-deny, widened only by what enabled skills declare (plus explicit --allow-host flags).
+  const declared = await openPackageCatalog().then(async c => { try { return await declaredAccess(c, cwd); } finally { c.close(); } });
+  const allowHosts = [...args.filter(a => a.startsWith('--allow-host=')).map(a => a.slice(13).toLowerCase()), ...declared.network];
   const toolInput = input.tool_input && typeof input.tool_input === 'object' ? input.tool_input as Record<string, unknown> : {};
-  const reason = evaluateGuard({ tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts });
+  const reason = evaluateGuard({ tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, secretsAllowed: declared.secrets });
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
   return 0;
 }
