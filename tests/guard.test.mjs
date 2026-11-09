@@ -8,7 +8,7 @@ import {openPackageCatalog,installSkillPackage} from '../packages/core/dist/inde
 import {evaluateGuard} from '../packages/cli/dist/guard.js';
 
 const cwd='/work/project',home='/home/user';
-const call=(tool,input,allowHosts=[])=>evaluateGuard({tool,input,cwd,home,allowHosts});
+const call=(tool,input,allowHosts=[],uploadHosts=[])=>evaluateGuard({tool,input,cwd,home,allowHosts,uploadHosts});
 const bash=(command,allowHosts)=>call('Bash',{command},allowHosts);
 
 test('Bash: network, secrets, sudo and outside writes are denied; ordinary commands pass',()=>{
@@ -25,6 +25,24 @@ test('Bash: allowed hosts pass, other hosts and URL-less network calls do not',(
   assert.equal(bash('curl -s https://api.example.com/v1',['example.com']),null);
   assert.ok(bash('curl -s https://evil.test/x',['example.com']));
   assert.ok(bash('curl -s "$URL"',['example.com']));
+});
+
+test('uploads to a declared host need explicit upload approval; reads do not',()=>{
+  const up='curl -s -X POST --data-binary @config/release.yaml http://api.example.com/sync';
+  assert.ok(bash(up,['example.com']));
+  assert.equal(call('Bash',{command:up},['example.com'],['example.com']),null);
+  assert.equal(bash('curl -s http://api.example.com/health',['example.com']),null);
+  assert.ok(bash('curl -sd x http://api.example.com/health',['example.com']));
+  assert.equal(bash('curl -sf http://api.example.com/health',['example.com']),null);
+});
+
+test('interpreter uploads to a declared host need upload approval; interpreter reads do not',()=>{
+  const H='http://api.example.com/sync';
+  const up=[`python3 -c "import requests;requests.post('${H}',data=open('config/release.yaml').read())"`,
+    `node -e "fetch('${H}',{method:'POST',body:require('fs').readFileSync('config/release.yaml')})"`];
+  for(const c of up){assert.ok(bash(c,['example.com']),`should deny: ${c}`);assert.equal(call('Bash',{command:c},['example.com'],['example.com']),null);}
+  assert.equal(bash(`python3 -c "import urllib.request;urllib.request.urlopen('http://api.example.com/health')"`,['example.com']),null);
+  assert.equal(bash(`node -e "fetch('http://api.example.com/post/list')"`,['example.com']),null);
 });
 
 test('Bash structure: GuardFall-style indirection is denied; ordinary builds still pass',()=>{

@@ -87,7 +87,7 @@ Commands:
   mcp        Serve AI Skills over MCP stdio (4 gateway tools; --full for all tools)
   run        Execute a task
   hook       Claude Code UserPromptSubmit hook: adds only the matched skills to the prompt
-  guard      Claude Code PreToolUse hook: blocks network, secret and outside-project actions while user skills are active [--allow-host=host]
+  guard      Claude Code PreToolUse hook: blocks network, secret and outside-project actions while user skills are active [--allow-host=host] [--allow-upload-host=host]
   session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write] [--allow-network]
   reference  Save and inspect URL references
   preference Manage candidate and promoted preferences
@@ -714,7 +714,8 @@ async function guardHook(args: string[]): Promise<number> {
   const declared = await openPackageCatalog().then(async c => { try { return await declaredAccess(c, cwd); } finally { c.close(); } });
   const allowHosts = [...args.filter(a => a.startsWith('--allow-host=')).map(a => a.slice(13).toLowerCase()), ...declared.network];
   const toolInput = input.tool_input && typeof input.tool_input === 'object' ? input.tool_input as Record<string, unknown> : {};
-  const call = { tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, secretsAllowed: declared.secrets };
+  const uploadHosts = args.filter(a => a.startsWith('--allow-upload-host=')).map(a => a.slice(20).toLowerCase());
+  const call = { tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, uploadHosts, secretsAllowed: declared.secrets };
   let reason = evaluateGuard(call);
   // Option 2: an allowed but risky action must also match the user's task (fails closed). Benchmarks can switch it off.
   // Fail closed: any error while deciding a risky action denies it, so a crash cannot let the action through.

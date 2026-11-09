@@ -1,6 +1,6 @@
 import { resolve, relative, isAbsolute } from 'node:path';
 
-export interface GuardCall { tool: string; input: Record<string, unknown>; cwd: string; home: string; allowHosts: string[]; secretsAllowed?: boolean }
+export interface GuardCall { tool: string; input: Record<string, unknown>; cwd: string; home: string; allowHosts: string[]; uploadHosts?: string[]; secretsAllowed?: boolean }
 /** Secret locations are denied unless an enabled skill declares `access.secrets: true`. */
 const secretHit=(path:string,call:GuardCall)=>!call.secretsAllowed&&SECRET.test(path);
 
@@ -15,6 +15,13 @@ const expand = (p: string, home: string) => (p === '~' ? home : p.startsWith('~/
 const inside = (path: string, cwd: string) => { const r = relative(cwd, path); return r === '' || (!r.startsWith('..') && !isAbsolute(r)); };
 const hostOf = (url: string) => { try { return new URL(url).hostname.toLowerCase(); } catch { return null; } };
 const allowed = (host: string | null, list: string[]) => !!host && list.some(a => host === a || host.endsWith(`.${a}`));
+// Uploads: a declared host is readable by default, but sending data to it needs the user's own --allow-upload-host approval.
+const WRITE_FLAG = /(^|\s)(-[a-zA-Z]*[dFT]|--data(-[a-z]+)?|--form|--json|--upload-file)(?=\s|=|$)/;
+const WRITE_METHOD = /(^|\s)(-X|--request)[\s=]*(POST|PUT|PATCH|DELETE)\b/i;
+// Interpreter code that sends a body: request bodies, POST/PUT methods, socket writes.
+const UPLOAD_HINT = /\b(data|body|json|files)\s*[=:]|\.(post|put|patch|delete|send|sendall|write)\s*\(|method\W{0,6}(post|put|patch|delete)/i;
+// Case-sensitive POST/PUT so a URL path like /post/ does not count as an upload.
+const UPLOAD_HINT_CASE = /\bPOST\b|\bPUT\b/;
 
 function resolvePath(p: string, call: GuardCall) { return resolve(call.cwd, expand(p, call.home)); }
 
@@ -114,6 +121,13 @@ export function structuralReason(command: string, call: GuardCall): string | nul
   return null;
 }
 
+function uploadReason(command: string, call: GuardCall): string | null {
+  if (!WRITE_FLAG.test(command) && !WRITE_METHOD.test(command) && !UPLOAD_HINT.test(command) && !UPLOAD_HINT_CASE.test(command)) return null;
+  const hosts = [...command.matchAll(/https?:\/\/([^/\s:'"?#]+)/gi)].map(m => m[1].toLowerCase());
+  if (hosts.some(h => !allowed(h, call.uploadHosts ?? []))) return 'sending data to a host (POST, PUT, data or upload flags) needs approval; start the guard with --allow-upload-host=<host>';
+  return null;
+}
+
 function bashReason(command: string, call: GuardCall): string | null {
   const structural = structuralReason(command, call);
   if (structural) return structural;
@@ -121,6 +135,8 @@ function bashReason(command: string, call: GuardCall): string | null {
   const urls = [...command.matchAll(/https?:\/\/([^/\s:'"?#]+)/gi)].map(m => m[1].toLowerCase());
   if (NET_CLIENT.test(command) || NET_INLINE.test(command)) {
     if (!urls.length || urls.some(h => !allowed(h, call.allowHosts))) return 'network commands to hosts that are not allowed are blocked while user-installed skills are active';
+    const upload = uploadReason(command, call);
+    if (upload) return upload;
   }
   for (const token of command.split(/[\s;&|<>()`'"]+/)) {
     if (!token) continue;
