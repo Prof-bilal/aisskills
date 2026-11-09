@@ -721,7 +721,11 @@ async function guardHook(args: string[]): Promise<number> {
     if (risky) {
       const task = typeof input.session_id === 'string' && /^[\w-]{1,128}$/.test(input.session_id) ? await loadTask(cwd, input.session_id) : null;
       if (!task) reason = 'risky action with no recorded user task is blocked while user-installed skills are active';
-      else { const check = await alignCheck(task, action); if (!check.aligned) reason = `AI Skills alignment check: ${check.reason}`; }
+      else {
+        const purposes = await openPackageCatalog().then(async c => { try { return (await c.active(cwd)).map(p => `${p.id}: ${p.manifest.description} (declared hosts: ${(p.manifest as { access?: { network?: string[] } }).access?.network?.join(', ') || 'none'})`).join('\n'); } finally { c.close(); } });
+        const check = await alignCheck(task, action, purposes);
+        if (!check.aligned) reason = `AI Skills alignment check: ${check.reason}`;
+      }
     }
   }
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
