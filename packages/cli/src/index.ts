@@ -52,7 +52,7 @@ import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActi
 import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
 import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
-import { evaluateGuard, isRiskyAction } from './guard.js';
+import { evaluateGuard, isRiskyAction, leakedSecrets } from './guard.js';
 import { alignCheck, loadTask, storeTask } from './align.js';
 import { declaredAccess } from 'aiskills-core';
 import { homedir } from 'node:os';
@@ -87,6 +87,7 @@ Commands:
   mcp        Serve AI Skills over MCP stdio (4 gateway tools; --full for all tools)
   run        Execute a task
   hook       Claude Code UserPromptSubmit hook: adds only the matched skills to the prompt
+  reply-guard Claude Code Stop hook: blocks a final reply that contains a secret value
   guard      Claude Code PreToolUse hook: blocks network, secret and outside-project actions while user skills are active [--allow-host=host] [--allow-upload-host=host]
   session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write] [--allow-network]
   reference  Save and inspect URL references
@@ -154,6 +155,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   }
   if (command === "hook") return promptHook();
   if (command === "guard") return guardHook(argv.slice(1));
+  if (command === "reply-guard") return replyGuardHook();
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));
   if (command === "goals" || command === "goal") return manageGoals(command, argv.slice(1));
@@ -697,6 +699,36 @@ async function promptHook(): Promise<number> {
 }
 
 /** Claude Code PreToolUse hook. Active only when user-installed skills are enabled for the project; built-in-only use is untouched. */
+// Stop hook: blocks a final reply that contains a secret, so the model answers again without it.
+// shortcut: the reply has already been shown once; a second leak in the same turn is allowed (stop_hook_active) to avoid a loop.
+async function replyGuardHook(): Promise<number> {
+  let input: { cwd?: unknown; transcript_path?: unknown; stop_hook_active?: unknown };
+  try {
+    const chunks: Buffer[] = []; for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+    input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch { return 0; }
+  if (input.stop_hook_active === true || typeof input.transcript_path !== 'string') return 0;
+  const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
+  const catalog = await openPackageCatalog();
+  let userSkills = 0;
+  try { userSkills = (await catalog.active(cwd)).length; } catch { userSkills = 1; /* cannot read the catalog: still scan */ } finally { catalog.close(); }
+  if (!userSkills) return 0;
+  const lines = (await readFile(input.transcript_path, 'utf8').catch(() => '')).split('\n').filter(Boolean);
+  let reply = '';
+  for (const line of lines) {
+    let entry: { type?: string; message?: { content?: unknown } };
+    try { entry = JSON.parse(line); } catch { continue; }
+    if (entry.type === 'user') reply = '';
+    if (entry.type === 'assistant' && Array.isArray(entry.message?.content)) for (const b of entry.message!.content as { type?: string; text?: string }[]) if (b.type === 'text' && b.text) reply += `${b.text}\n`;
+  }
+  const env = await readFile(join(cwd, '.env'), 'utf8').catch(() => '');
+  const envValues = env.split('\n').map(l => l.replace(/^export\s+/, '').split('=').slice(1).join('=').trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+  const kinds = leakedSecrets(reply, envValues);
+  await mkdir(join(cwd, '.ai'), { recursive: true, mode: 0o700 }).then(() => appendFile(join(cwd, '.ai', 'guard.jsonl'), JSON.stringify({ time: new Date().toISOString(), tool: 'reply', decision: kinds.length ? 'deny' : 'allow', reason: kinds.length ? `reply contains ${kinds.join(', ')}` : null, hosts: [], paths: [] }) + '\n', { mode: 0o600 })).catch(() => undefined);
+  if (kinds.length) process.stdout.write(JSON.stringify({ decision: 'block', reason: 'AI Skills reply guard: your reply contains a secret value. Answer again without it: name the secret and where it is, but do not repeat its value.' }));
+  return 0;
+}
+
 async function guardHook(args: string[]): Promise<number> {
   let input: { tool_name?: unknown; tool_input?: unknown; cwd?: unknown; session_id?: unknown };
   try {

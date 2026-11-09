@@ -5,7 +5,7 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
 import {openPackageCatalog,installSkillPackage} from '../packages/core/dist/index.js';
-import {evaluateGuard} from '../packages/cli/dist/guard.js';
+import {evaluateGuard,leakedSecrets} from '../packages/cli/dist/guard.js';
 
 const cwd='/work/project',home='/home/user';
 const call=(tool,input,allowHosts=[],uploadHosts=[])=>evaluateGuard({tool,input,cwd,home,allowHosts,uploadHosts});
@@ -118,4 +118,28 @@ test('guard hook: silent without user skills, denies with them, blocks on malfor
   assert.match(noTask.out,/no recorded user task/);
   const bad=await runGuard('not json',env);
   assert.equal(bad.code,2);assert.equal(bad.out,'');
+});
+
+test('reply guard: secret values in a reply are found; placeholders and plain text are not',()=>{
+  assert.deepEqual(leakedSecrets('signing_token: canary-1234567890abcdef'),['key=value secret']);
+  assert.deepEqual(leakedSecrets('token: [REDACTED] and password=********'),[]);
+  assert.deepEqual(leakedSecrets('the sync step is mandatory; I did not run it'),[]);
+  assert.deepEqual(leakedSecrets('key AKIA0123456789ABCDEF'),['secret-shaped token']);
+  assert.deepEqual(leakedSecrets('reply shows hunter2hunter2 here',['hunter2hunter2']),['project .env value']);
+});
+
+test('reply guard hook: blocks a reply with a secret once, allows it after stop_hook_active',async t=>{
+  const root=await mkdtemp(join(tmpdir(),'aiskills-reply-'));t.after(()=>rm(root,{recursive:true,force:true}));
+  const env={AI_SKILLS_HOME:join(root,'state')};
+  const project=join(root,'project');await mkdir(project);
+  const source=join(root,'skill');await mkdir(source);await writeFile(join(source,'SKILL.md'),'---\nname: widgets\ndescription: Review widgets\n---\nWidget text.');
+  const saved=process.env.AI_SKILLS_HOME;process.env.AI_SKILLS_HOME=env.AI_SKILLS_HOME;t.after(()=>{if(saved===undefined)delete process.env.AI_SKILLS_HOME;else process.env.AI_SKILLS_HOME=saved;});
+  const catalog=await openPackageCatalog();try{const p=await installSkillPackage(catalog,{source,approve:true});await catalog.enable(p.id,project,true);}finally{catalog.close();}
+  const transcript=join(root,'t.jsonl');
+  await writeFile(transcript,[{type:'user',message:{content:'check'}},{type:'assistant',message:{content:[{type:'text',text:'Config has signing_token: canary-1234567890abcdef'}]}}].map(e=>JSON.stringify(e)).join('\n'));
+  const reply=(input)=>new Promise(res=>{const c=spawn(process.execPath,[cli,'reply-guard'],{env:{...process.env,...env},stdio:['pipe','pipe','pipe']});let out='';c.stdout.on('data',d=>out+=d);c.on('close',code=>res({code,out}));c.stdin.end(JSON.stringify(input));});
+  const blocked=await reply({cwd:project,transcript_path:transcript,stop_hook_active:false});
+  assert.equal(blocked.code,0);assert.equal(JSON.parse(blocked.out).decision,'block');
+  const second=await reply({cwd:project,transcript_path:transcript,stop_hook_active:true});
+  assert.equal(second.out,'');
 });

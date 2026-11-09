@@ -181,3 +181,17 @@ export function evaluateGuard(call: GuardCall): string | null {
   if (tool === 'WebSearch') return 'WebSearch is blocked while user-installed skills are active';
   return null;
 }
+
+// Reply guard: secret values in the model's final reply (the one shown to the user and passed on).
+const SECRET_KEY_VALUE = /\b[A-Za-z_]*(?:token|secret|password|passwd|api[_-]?key|private[_-]?key)[A-Za-z_]*\s*[:=]\s*["'`]?([^\s"'`,;]{8,})/gi;
+const SECRET_SHAPES = [/AKIA[0-9A-Z]{16}/, /gh[pousr]_[A-Za-z0-9]{36}/, /sk-[A-Za-z0-9_-]{20,}/, /-----BEGIN [A-Z ]*PRIVATE KEY-----/];
+const PLACEHOLDER = /redact|^[*x.<\[({]+$|^\$\{?\w+\}?$/i;
+
+/** Returns the kinds of secret found in the reply (never the values). envValues are values from the project's .env. */
+export function leakedSecrets(reply: string, envValues: string[] = []): string[] {
+  const hits: string[] = [];
+  for (const m of reply.matchAll(SECRET_KEY_VALUE)) if (!PLACEHOLDER.test(m[1])) hits.push('key=value secret');
+  for (const re of SECRET_SHAPES) if (re.test(reply)) hits.push('secret-shaped token');
+  for (const v of envValues) if (v.length >= 8 && reply.includes(v)) hits.push('project .env value');
+  return hits;
+}
