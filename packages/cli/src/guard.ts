@@ -51,6 +51,28 @@ export function splitShell(command: string): { segments: string[][]; substitutio
   return { segments: segments.filter(s => s.length), substitution };
 }
 
+const INTERPRETERS = new Set(['python', 'python3', 'node', 'perl', 'ruby', 'php', 'deno', 'bun']);
+const WRITE_HINT = /open\s*\(|writeFile|appendFile|createWriteStream|fs\.(write|rm|unlink|rename|copy)|File\.write|file_put_contents|os\.(remove|rename|system)|shutil\.|subprocess|child_process|execSync|spawnSync|Bun\.write|system\s*\(|exec\s*\(/;
+const QUOTED = /["']([^"'\n]*)["']/g;
+
+/**
+ * Inline interpreter code (python -c, node -e, ...) is code, not a shell word: deny any write-capable call whose
+ * target is outside the project, any target we cannot read as a literal, and any shell escape from inside it.
+ * shortcut: a regex over the program text cannot prove what a dynamic path resolves to; those are denied, not analysed.
+ */
+function inlineReason(words: string[], call: GuardCall): string | null {
+  const flag = words.findIndex(w => w === '-c' || w === '-e');
+  if (flag === -1 || flag + 1 >= words.length) return null;
+  const code = words.slice(flag + 1).join(' ');
+  if (/subprocess|child_process|execSync|spawnSync|os\.system|system\s*\(|exec\s*\(/.test(code)) return 'shell escape from inline interpreter code is blocked while user-installed skills are active';
+  if (!WRITE_HINT.test(code)) return null;
+  if (/(open|writeFile|writeFileSync|appendFile|appendFileSync|createWriteStream|file_put_contents|write_file|File\.write)\s*\(\s*[^'"\s)]/.test(code)) return 'inline interpreter code that writes to a non-literal path is blocked while user-installed skills are active';
+  const targets = [...code.matchAll(QUOTED)].map(m => m[1]).filter(t => t.length);
+  if (!targets.length) return 'inline interpreter code that writes to a path it cannot read literally is blocked while user-installed skills are active';
+  for (const target of targets) if (!inside(resolvePath(target, call), call.cwd)) return 'inline interpreter code that writes outside the project is blocked while user-installed skills are active';
+  return null;
+}
+
 /** Structural denials: substitution, shell and eval indirection, and decoded payloads piped onward. */
 export function structuralReason(command: string, call: GuardCall): string | null {
   const { segments, substitution } = splitShell(command);
@@ -66,6 +88,7 @@ export function structuralReason(command: string, call: GuardCall): string | nul
     if (EVALS.has(name)) return 'shell evaluation (eval, source, exec) is blocked while user-installed skills are active';
     if (SHELLS.has(name)) return 'starting a shell from a command is blocked while user-installed skills are active';
     if (name === 'base64' && piped && words.some(w => /^(-d|-D|--decode)$/.test(w))) return 'decoded input piped onward is blocked while user-installed skills are active';
+    if (INTERPRETERS.has(name)) { const reason = inlineReason(words, call); if (reason) return reason; }
     if (NET_CMDS.has(name)) {
       const hosts = [...command.matchAll(/https?:\/\/([^/\s:'"?#]+)/gi)].map(m => m[1].toLowerCase());
       if (!hosts.length || hosts.some(h => !allowed(h, call.allowHosts))) return 'network commands to hosts that are not allowed are blocked while user-installed skills are active';

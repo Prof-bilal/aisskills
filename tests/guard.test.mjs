@@ -36,6 +36,15 @@ test('Bash structure: GuardFall-style indirection is denied; ordinary builds sti
     assert.equal(bash(c),null,`should allow: ${c}`);
 });
 
+test('inline interpreter code: writes outside the project and shell escapes are denied',()=>{
+  for(const c of [`python3 -c "open('/tmp/x','w').write('ok')"`,`node -e "require('fs').writeFileSync('/tmp/x','ok')"`,
+    `python3 -c "import subprocess;subprocess.run(['id'])"`,`node -e "require('child_process').execSync('id')"`,
+    `python3 -c "open(p,'w').write('x')"`,`perl -e "system('id')"`])
+    assert.ok(bash(c),`should deny: ${c}`);
+  for(const c of [`python3 -c "print(1+1)"`,`node -e "console.log(2)"`,`python3 -c "open('out.txt','w').write('ok')"`,`python3 -c "open('out.txt').read()"`])
+    assert.equal(bash(c),null,`should allow: ${c}`);
+});
+
 test('file tools: secrets and outside writes are denied; project files pass',()=>{
   assert.ok(call('Read',{file_path:'/home/user/.ssh/id_rsa'}));
   assert.ok(call('Read',{file_path:'~/.aws/credentials'}));
