@@ -164,13 +164,14 @@ search keeps them visible.
 ### Use with Claude Code daily (skills with no extra turns)
 
 The prompt hook routes each prompt and adds only the matching skills to that
-message, so the agent needs no `discover_capabilities`/`load_skill` round trips.
+message, so the agent needs no `use_skills`/`load_skill` round trips.
 Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
 
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "aiskills hook" }] }]
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "aiskills hook" }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "aiskills guard" }] }]
   },
   "sandbox": {
     "enabled": true,
@@ -184,7 +185,9 @@ Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
 }
 ```
 
-The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
+The `PreToolUse` guard (`aiskills guard`, add `--allow-host=example.com` per allowed host) blocks network
+commands, secret reads and writes outside the project while user-installed skills are enabled; it is a
+first line of defence, not a complete shell parser. The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
 text, and no scanner can reliably stop text that tricks a model. The sandbox stops a
 tricked agent's shell commands from reaching the network, writing outside the project or
 reading secrets. It does not cover Claude Code's file tools, so the `permissions` rules
@@ -373,8 +376,8 @@ background updates remain follow-up work.
 The heuristic scanner cannot prove
 instructions safe; review and runtime permissions remain necessary.
 
-The AI Skills MCP server exposes `discover_capabilities` (compact task matches),
-`load_skill` (instructions on demand), `search_tools` (matching gateway tools)
+The AI Skills MCP server exposes `use_skills` (routes the task and returns the matching skills in one call),
+`load_skill` (one skill by id), `search_tools` (matching gateway tools)
 and `call_capability` (a reviewed tool call). `load_skill` supports built-ins and
 approved enabled project skills, including task-selected nested plugin guidance.
 Loading verifies installed snapshots and enforces context budgets. Tool discovery

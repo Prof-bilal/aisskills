@@ -46,8 +46,8 @@ readline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.pa
   catalog.save({...p,manifest:originalManifest});
   const server=createMcpServer(new CoreRuntime({projectRoot:root,engines:[],permissions:['shell.execute']}),undefined,{compact:true});
   const client=new Client({name:'broker-test',version:'1'});const [a,b]=InMemoryTransport.createLinkedPair();await server.connect(a);await client.connect(b);t.after(async()=>{await client.close();await server.close();});
-  assert.deepEqual((await client.listTools()).tools.map(t=>t.name),['search_tools','call_capability','discover_capabilities','load_skill']);
-  const descriptions=(await client.listTools()).tools;for(const tool of descriptions)assert.equal(tool.annotations.readOnlyHint,['discover_capabilities','load_skill'].includes(tool.name));
+  assert.deepEqual((await client.listTools()).tools.map(t=>t.name),['search_tools','call_capability','use_skills','load_skill']);
+  const descriptions=(await client.listTools()).tools;for(const tool of descriptions)assert.equal(tool.annotations.readOnlyHint,['use_skills','load_skill'].includes(tool.name));
   const builtin=(await SkillRegistry.fromDirectory(getBuiltInSkillsDirectory())).list()[0];
   const guidance=await client.callTool({name:'load_skill',arguments:{id:builtin.id}});assert.equal(JSON.parse(guidance.content[0].text).source,'built-in');
   const search=async task=>JSON.parse((await client.callTool({name:'search_tools',arguments:{task}})).content[0].text);

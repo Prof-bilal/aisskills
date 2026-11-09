@@ -8,8 +8,9 @@ server fixes its project root at startup; requests cannot change it.
 Stdout is reserved for MCP framing. Node 20+ supports the base server; the optional
 Smurf development bridge needs Node 24.
 
-By default the server exposes only the four gateway tools: `discover_capabilities`,
-`load_skill`, `search_tools` and `call_capability`. They are marked
+By default the server exposes only the four gateway tools: `use_skills`,
+`load_skill`, `search_tools` and `call_capability`. `use_skills` routes a task and returns only the matching
+skills, marked as untrusted data, in a single call. `discover_capabilities` remains in `--full`. They are marked
 `anthropic/alwaysLoad` so Claude Code's tool search does not hide them.
 `search_tools` returns ranked tool names first; pass `select` to fetch schemas for
 the chosen tools. `call_capability` results over 16 KB are saved under

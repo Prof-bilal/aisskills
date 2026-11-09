@@ -31,6 +31,12 @@ export async function collectDiagnostics():Promise<Diagnostic[]> {
    checks.push(!active?{name:'Claude Code sandbox',status:'PASS',detail:'No user-installed skills are enabled for this project'}
      :sandboxed?{name:'Claude Code sandbox',status:'PASS',detail:`${active} user skill(s) enabled; Claude Code sandbox is on`}
      :{name:'Claude Code sandbox',status:'WARN',detail:`${active} user skill(s) enabled but Claude Code's sandbox is off. When using plain claude with the AI Skills hook, add {"sandbox":{"enabled":true,"network":{"allowedDomains":[]},"filesystem":{"denyRead":["~/.ssh","~/.aws",".env"]}},"permissions":{"deny":["WebFetch","Read(~/.ssh/**)","Read(**/.env*)"]}} to .claude/settings.json. aiskills session applies this automatically.`});}
+  {const catalog=await openPackageCatalog();let active=0;try{active=(await catalog.active(process.cwd())).length;}catch{}finally{catalog.close();}
+   const files=[join(process.env.CLAUDE_CONFIG_DIR??join(homedir(),'.claude'),'settings.json'),join(process.cwd(),'.claude','settings.json'),join(process.cwd(),'.claude','settings.local.json')];
+   let guarded=false;for(const f of files){try{if(/aiskills[^"]*\sguard|index\.js\s+guard/.test(JSON.stringify(JSON.parse(await readFile(f,'utf8'))?.hooks?.PreToolUse??'')))guarded=true;}catch{}}
+   checks.push(!active?{name:'Tool-call guard',status:'PASS',detail:'No user-installed skills are enabled for this project'}
+     :guarded?{name:'Tool-call guard',status:'PASS',detail:`${active} user skill(s) enabled; the aiskills guard PreToolUse hook is configured`}
+     :{name:'Tool-call guard',status:'WARN',detail:`${active} user skill(s) enabled but no aiskills guard PreToolUse hook is configured. Add {"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"aiskills guard"}]}]}} to .claude/settings.json. aiskills session already runs without shell tools.`});}
   checks.push({name:'Session isolation',status:'WARN',detail:'MCP/plugin/hook overrides are verified for supported clients; native skill discovery and administrator-managed capabilities require client-specific verification.'});
   return checks;
 }

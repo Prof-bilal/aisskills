@@ -51,6 +51,8 @@ import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActi
 import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
 import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
+import { evaluateGuard } from './guard.js';
+import { homedir } from 'node:os';
 import { collectDiagnostics } from './doctor.js';
 import { acquireReference,captureBrowserReference } from 'aiskills-core';
 
@@ -82,6 +84,7 @@ Commands:
   mcp        Serve AI Skills over MCP stdio (4 gateway tools; --full for all tools)
   run        Execute a task
   hook       Claude Code UserPromptSubmit hook: adds only the matched skills to the prompt
+  guard      Claude Code PreToolUse hook: blocks network, secret and outside-project actions while user skills are active [--allow-host=host]
   session    Launch task-selected Codex/Claude configuration [--agent=codex|claude] [--dry-run] [--print] [--write] [--allow-network]
   reference  Save and inspect URL references
   preference Manage candidate and promoted preferences
@@ -147,6 +150,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     await serveMcp(await createLocalRuntime(), detectAgents, {compact:!argv.includes('--full'),agent,...(allow||deny?{allowExecution:allow}:{})}); return 0;
   }
   if (command === "hook") return promptHook();
+  if (command === "guard") return guardHook(argv.slice(1));
   if (command === "run") return runTask(argv.slice(1));
   if (command === "security") return securityCheck(argv.slice(1));
   if (command === "goals" || command === "goal") return manageGoals(command, argv.slice(1));
@@ -686,4 +690,25 @@ async function promptHook(): Promise<number> {
     logger.error(`AI Skills hook skipped: ${error instanceof Error ? error.message : String(error)}`);
     return 0;
   } finally { catalog.close(); }
+}
+
+/** Claude Code PreToolUse hook. Active only when user-installed skills are enabled for the project; built-in-only use is untouched. */
+async function guardHook(args: string[]): Promise<number> {
+  let input: { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
+  try {
+    const chunks: Buffer[] = []; let size = 0;
+    for await (const chunk of process.stdin) { size += chunk.length; if (size > 1024 * 1024) throw new Error('Hook input exceeds 1 MiB'); chunks.push(chunk as Buffer); }
+    input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) { logger.error(`Guard blocked the call: invalid hook input (${error instanceof Error ? error.message : String(error)})`); return 2; }
+  if (typeof input.tool_name !== 'string') return 0;
+  const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
+  const catalog = await openPackageCatalog();
+  let userSkills = 0;
+  try { userSkills = (await catalog.active(cwd)).length; } catch { userSkills = 1; /* cannot read the catalog: stay protective */ } finally { catalog.close(); }
+  if (!userSkills) return 0;
+  const allowHosts = args.filter(a => a.startsWith('--allow-host=')).map(a => a.slice(13).toLowerCase());
+  const toolInput = input.tool_input && typeof input.tool_input === 'object' ? input.tool_input as Record<string, unknown> : {};
+  const reason = evaluateGuard({ tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts });
+  if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
+  return 0;
 }

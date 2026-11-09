@@ -8,6 +8,7 @@ import {acquireReference,captureBrowserReference,readReferenceScreenshot,readPlu
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CapabilityBroker, type ToolRef } from './capability-broker.js';
+import { buildSkillGuidance } from './session.js';
 
 const taskSchema = { type: 'object', properties: { task: { type: 'string', minLength: 1, maxLength: 32000 } }, required: ['task'], additionalProperties: false };
 export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<unknown> = async () => [], options: {compact?:boolean;agent?:'codex'|'claude';allowExecution?:boolean} = {}) {
@@ -19,6 +20,7 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
     ...['inspect_reference','view_reference_screenshot'].map(name=>({name,description:name==='inspect_reference'?'Read compact saved reference evidence without image bytes':'Load a saved, integrity-verified reference screenshot on demand',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128}},required:['id'],additionalProperties:false}})),
     {name:'capture_reference',description:'Render a saved HTTPS reference in a network-isolated Warden browser and save screenshot evidence; requires host browser.use and network.read grants',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128}},required:['id'],additionalProperties:false}},
     {name:'fetch_reference',description:'Acquire a saved HTTPS reference as bounded untrusted data; requires host network.read permission',inputSchema:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:128}},required:['id'],additionalProperties:false}},
+    { name: 'use_skills', description: 'Route the task to approved skills and return their instructions in one call; returns only the matching skills, marked as untrusted reference data', inputSchema: taskSchema },
     { name: 'discover_capabilities', description: 'Search approved skills enabled for this project; returns metadata and selection reasons without full instructions', inputSchema: taskSchema },
     { name: 'load_skill', description: 'Load a built-in skill or approved project skill; provide task to select nested plugin guidance without running code', inputSchema: {type:'object',properties:{id:{type:'string',minLength:1,maxLength:128},task:{type:'string',minLength:1,maxLength:32000}},required:['id'],additionalProperties:false} },
     { name: 'inspect_project', description: 'Inspect the host-configured project', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
@@ -30,8 +32,8 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
     { name: 'list_preferences', description: 'List candidate and promoted project preferences', inputSchema: { type: 'object', properties: { status: { type: 'string', enum: ['candidate', 'promoted', 'rejected'] } }, additionalProperties: false } },
     { name: 'list_agents', description: 'List detected agents', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }
   ];
-  const readOnlyNames=new Set(['discover_capabilities','load_skill','inspect_project','recommend_skills','plan_task','verify_claim','check_goal','verify_task','list_agents','inspect_reference','view_reference_screenshot','list_references','list_preferences']);
-  const compactNames = new Set(['discover_capabilities','load_skill','search_tools','call_capability']);
+  const readOnlyNames=new Set(['use_skills','discover_capabilities','load_skill','inspect_project','recommend_skills','plan_task','verify_claim','check_goal','verify_task','list_agents','inspect_reference','view_reference_screenshot','list_references','list_preferences']);
+  const compactNames = new Set(['use_skills','load_skill','search_tools','call_capability']);
   const tools = (options.compact ? allTools.filter(t => compactNames.has(t.name)) : allTools).map(t=>({...t,annotations:{readOnlyHint:readOnlyNames.has(t.name),destructiveHint:!readOnlyNames.has(t.name),openWorldHint:!readOnlyNames.has(t.name)},...(compactNames.has(t.name)?{_meta:{'anthropic/alwaysLoad':true}}:{})}));
   const results = new Map<string, unknown>();
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
@@ -75,6 +77,16 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
           if(!runtime.options.permissions?.includes('network.read'))throw new Error('Host must grant network.read for reference acquisition');
           if(typeof args.id!=='string'||args.id.length>128)throw new Error('Reference ID required');
           const store=await ensureProjectMemoryStore(runtime.options.projectRoot);try{data=await acquireReference(store,args.id);}finally{store.close();}break;
+        }
+        case 'use_skills': {
+          if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000) throw new Error('A task of 1–32000 characters is required');
+          const catalog=await openPackageCatalog();
+          try {
+            const plan=await planPackageActivation(catalog,runtime.options.projectRoot,args.task,{agent:options.agent});
+            // One call replaces discover + load: routing already enforces the token budget, and user text arrives wrapped as untrusted data.
+            const {guidance}=await buildSkillGuidance(catalog,plan,args.task,options.agent??'claude');
+            data={selected:[...plan.builtinSkills,...plan.selectedPackages],instructions:guidance.join('\n\n')};
+          } finally {catalog.close();} break;
         }
         case 'discover_capabilities': {
           if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000) throw new Error('A task of 1–32000 characters is required');

@@ -149,7 +149,7 @@ test('MCP stdio handshake and project inspection use the CLI server', async t =>
   await compact.connect(new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp'], stderr: 'pipe' }));
   const compactTools = (await compact.listTools()).tools;
   await compact.close();
-  assert.deepEqual(compactTools.map(t => t.name).sort(), ['call_capability', 'discover_capabilities', 'load_skill', 'search_tools']);
+  assert.deepEqual(compactTools.map(t => t.name).sort(), ['call_capability', 'load_skill', 'search_tools', 'use_skills']);
   assert.ok(compactTools.every(t => t._meta?.['anthropic/alwaysLoad'] === true));
   const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('packages/cli/dist/index.js'), 'mcp', '--full'], stderr: 'pipe' });
   await client.connect(transport);
