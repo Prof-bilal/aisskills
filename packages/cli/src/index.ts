@@ -40,7 +40,8 @@ import { getBuiltInPacksDirectory, PackRegistry } from "aiskills-core";
 import type { VerificationCheck } from "aiskills-core";
 import { createBuiltInAdapters, detectAgents, SAFE_READ_PERMISSIONS } from "aiskills-adapters-local";
 import { realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, appendFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -729,6 +730,13 @@ async function guardHook(args: string[]): Promise<number> {
       }
     }
   } catch (error) { reason = `AI Skills guard could not decide (${error instanceof Error ? error.message : String(error)}); blocked`; }
+  // Decision log: hosts and paths only, never command text, so the log cannot leak secrets.
+  const targets = ((): { hosts: string[]; paths: string[] } => {
+    const text = typeof toolInput.command === 'string' ? toolInput.command : typeof toolInput.url === 'string' ? toolInput.url : typeof toolInput.file_path === 'string' ? toolInput.file_path : '';
+    const urls = [...text.matchAll(/https?:\/\/([^/\s'"]+)(\/[^\s'"?#]*)?/gi)];
+    return { hosts: urls.map(m => m[1].toLowerCase()), paths: urls.map(m => m[2] ?? '/') };
+  })();
+  await mkdir(join(cwd, '.ai'), { recursive: true, mode: 0o700 }).then(() => appendFile(join(cwd, '.ai', 'guard.jsonl'), JSON.stringify({ time: new Date().toISOString(), tool: input.tool_name, decision: reason ? 'deny' : 'allow', reason: reason ?? null, hosts: targets.hosts, paths: targets.paths }) + '\n', { mode: 0o600 })).catch(() => undefined);
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
   return 0;
 }
