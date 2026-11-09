@@ -87,8 +87,17 @@ test('guard hook: silent without user skills, denies with them, blocks on malfor
   assert.equal(out.hookEventName,'PreToolUse');assert.equal(out.permissionDecision,'deny');assert.match(out.permissionDecisionReason,/AI Skills guard/);
   const fine=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'git log'},cwd:project}),env);
   assert.equal(fine.out,'');
-  const allowed=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1'},cwd:project}),env,['--allow-host=example.com']);
+  // Option 2: a risky (curl) action needs a recorded task and must pass the alignment check. A fake model stands in.
+  const fakeYes=join(root,'claude-yes');const fakeNo=join(root,'claude-no');
+  await writeFile(fakeYes,`#!/bin/sh\necho '{"result":"YES"}'\n`,{mode:0o700});await writeFile(fakeNo,`#!/bin/sh\necho '{"result":"NO"}'\n`,{mode:0o700});
+  const {storeTask}=await import('../packages/cli/dist/align.js');await storeTask(project,'sess-1','check the public API health');
+  const curlIn=JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1'},cwd:project,session_id:'sess-1'});
+  const allowed=await runGuard(curlIn,{...env,AI_SKILLS_CLAUDE_BINARY:fakeYes},['--allow-host=example.com']);
   assert.equal(allowed.out,'');
+  const misaligned=await runGuard(curlIn,{...env,AI_SKILLS_CLAUDE_BINARY:fakeNo},['--allow-host=example.com']);
+  assert.match(misaligned.out,/alignment check/);
+  const noTask=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1'},cwd:project,session_id:'missing'}),{...env,AI_SKILLS_CLAUDE_BINARY:fakeYes},['--allow-host=example.com']);
+  assert.match(noTask.out,/no recorded user task/);
   const bad=await runGuard('not json',env);
   assert.equal(bad.code,2);assert.equal(bad.out,'');
 });

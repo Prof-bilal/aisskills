@@ -75,6 +75,21 @@ function inlineReason(words: string[], call: GuardCall): string | null {
   return null;
 }
 
+/** Actions that send data out or touch secrets: allowed by policy, but checked against the task (option 2). */
+export function isRiskyAction(call: GuardCall): { risky: boolean; action: string } {
+  const { tool, input } = call;
+  if (tool === 'Bash' && typeof input.command === 'string') {
+    const c = input.command;
+    return { risky: /(^|[\s;&|`(])(curl|wget|nc|ncat|socat|ssh|scp|sftp|ftp|python3?|node|perl|ruby|php|deno|bun)(\s|$)/.test(c), action: c };
+  }
+  if (tool === 'WebFetch') return { risky: true, action: String(input.url ?? '') };
+  if (['Read', 'Edit', 'Write', 'NotebookEdit', 'MultiEdit'].includes(tool)) {
+    const file = String(input.file_path ?? input.notebook_path ?? '');
+    return { risky: !!file && SECRET.test(resolvePath(file, call)), action: `${tool} ${file}` };
+  }
+  return { risky: false, action: '' };
+}
+
 /** Structural denials: substitution, shell and eval indirection, and decoded payloads piped onward. */
 export function structuralReason(command: string, call: GuardCall): string | null {
   const { segments, substitution } = splitShell(command);

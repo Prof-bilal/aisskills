@@ -51,7 +51,8 @@ import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActi
 import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
 import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
-import { evaluateGuard } from './guard.js';
+import { evaluateGuard, isRiskyAction } from './guard.js';
+import { alignCheck, loadTask, storeTask } from './align.js';
 import { declaredAccess } from 'aiskills-core';
 import { homedir } from 'node:os';
 import { collectDiagnostics } from './doctor.js';
@@ -671,13 +672,14 @@ if (invokedPath && realpathSync(invokedPath) === realpathSync(modulePath)) {
 
 /** Claude Code UserPromptSubmit hook: routes the prompt and adds only matched skill text, with no extra agent turns. */
 async function promptHook(): Promise<number> {
-  let input: { prompt?: unknown; cwd?: unknown };
+  let input: { prompt?: unknown; cwd?: unknown; session_id?: unknown };
   try {
     const chunks: Buffer[] = []; let size = 0;
     for await (const chunk of process.stdin) { size += chunk.length; if (size > 1024 * 1024) throw new Error('Hook input exceeds 1 MiB'); chunks.push(chunk as Buffer); }
     input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } catch (error) { logger.error(`Invalid hook input: ${error instanceof Error ? error.message : String(error)}`); return 1; }
   if (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 32000) return 0;
+  if (typeof input.session_id === 'string' && /^[\w-]{1,128}$/.test(input.session_id)) await storeTask(typeof input.cwd === 'string' ? input.cwd : process.cwd(), input.session_id, input.prompt).catch(() => undefined);
   const project = typeof input.cwd === 'string' ? input.cwd : process.cwd();
   const catalog = await openPackageCatalog();
   try {
@@ -695,7 +697,7 @@ async function promptHook(): Promise<number> {
 
 /** Claude Code PreToolUse hook. Active only when user-installed skills are enabled for the project; built-in-only use is untouched. */
 async function guardHook(args: string[]): Promise<number> {
-  let input: { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
+  let input: { tool_name?: unknown; tool_input?: unknown; cwd?: unknown; session_id?: unknown };
   try {
     const chunks: Buffer[] = []; let size = 0;
     for await (const chunk of process.stdin) { size += chunk.length; if (size > 1024 * 1024) throw new Error('Hook input exceeds 1 MiB'); chunks.push(chunk as Buffer); }
@@ -711,7 +713,17 @@ async function guardHook(args: string[]): Promise<number> {
   const declared = await openPackageCatalog().then(async c => { try { return await declaredAccess(c, cwd); } finally { c.close(); } });
   const allowHosts = [...args.filter(a => a.startsWith('--allow-host=')).map(a => a.slice(13).toLowerCase()), ...declared.network];
   const toolInput = input.tool_input && typeof input.tool_input === 'object' ? input.tool_input as Record<string, unknown> : {};
-  const reason = evaluateGuard({ tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, secretsAllowed: declared.secrets });
+  const call = { tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, secretsAllowed: declared.secrets };
+  let reason = evaluateGuard(call);
+  // Option 2: an allowed but risky action must also match the user's task (fails closed). Benchmarks can switch it off.
+  if (!reason && process.env.AI_SKILLS_NO_ALIGN !== '1') {
+    const { risky, action } = isRiskyAction(call);
+    if (risky) {
+      const task = typeof input.session_id === 'string' && /^[\w-]{1,128}$/.test(input.session_id) ? await loadTask(cwd, input.session_id) : null;
+      if (!task) reason = 'risky action with no recorded user task is blocked while user-installed skills are active';
+      else { const check = await alignCheck(task, action); if (!check.aligned) reason = `AI Skills alignment check: ${check.reason}`; }
+    }
+  }
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
   return 0;
 }
