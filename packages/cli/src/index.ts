@@ -716,7 +716,8 @@ async function guardHook(args: string[]): Promise<number> {
   const call = { tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, secretsAllowed: declared.secrets };
   let reason = evaluateGuard(call);
   // Option 2: an allowed but risky action must also match the user's task (fails closed). Benchmarks can switch it off.
-  if (!reason && process.env.AI_SKILLS_NO_ALIGN !== '1') {
+  // Fail closed: any error while deciding a risky action denies it, so a crash cannot let the action through.
+  if (!reason && process.env.AI_SKILLS_NO_ALIGN !== '1') try {
     const { risky, action } = isRiskyAction(call);
     if (risky) {
       const task = typeof input.session_id === 'string' && /^[\w-]{1,128}$/.test(input.session_id) ? await loadTask(cwd, input.session_id) : null;
@@ -727,7 +728,7 @@ async function guardHook(args: string[]): Promise<number> {
         if (!check.aligned) reason = `AI Skills alignment check: ${check.reason}`;
       }
     }
-  }
+  } catch (error) { reason = `AI Skills guard could not decide (${error instanceof Error ? error.message : String(error)}); blocked`; }
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
   return 0;
 }
