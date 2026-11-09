@@ -171,7 +171,8 @@ Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
 {
   "hooks": {
     "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "aiskills hook" }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "aiskills guard" }] }]
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "aiskills guard" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "aiskills reply-guard" }] }]
   },
   "sandbox": {
     "enabled": true,
@@ -187,7 +188,12 @@ Add it to `.claude/settings.json` (project) or `~/.claude/settings.json` (user):
 
 The `PreToolUse` guard (`aiskills guard`, add `--allow-host=example.com` per allowed host) blocks network
 commands, secret reads and writes outside the project while user-installed skills are enabled; it is a
-first line of defence, not a complete shell parser. The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
+first line of defence, not a complete shell parser. Hosts a skill declares (`access.network`) can be read, but
+sending data to them (POST/PUT, data or upload flags, interpreter request bodies) is blocked unless you add
+`--allow-upload-host=<host>`. Other allowed network and interpreter calls also go through an alignment check against
+your prompt, which fails closed; plain GET reads to an allowed host skip it. The `Stop` hook (`aiskills reply-guard`) blocks a final reply that contains a
+secret value once, so the agent answers again without it; the first reply has already been shown. Measured
+results and limits: [benchmarks/results/security/REPORT.md](benchmarks/results/security/REPORT.md). The `sandbox` and `permissions` blocks matter: user-installed skills are third-party
 text, and no scanner can reliably stop text that tricks a model. The sandbox stops a
 tricked agent's shell commands from reaching the network, writing outside the project or
 reading secrets. It does not cover Claude Code's file tools, so the `permissions` rules

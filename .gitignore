@@ -17,3 +17,7 @@ release/
 benchmarks/.cache/
 benchmarks/results/*/raw/
 benchmarks/results/*/runs.jsonl
+
+# Local tool state
+.contextgit/
+.shiki/
