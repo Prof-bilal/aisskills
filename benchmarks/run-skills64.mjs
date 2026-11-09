@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Large skill benchmark (Claude Code, claude-haiku-5-5, low effort): 64 skills, 40 tasks.
 //   native64  : all 64 skills installed directly into the project's .claude/skills (no MCP)
+//   gateway2  : the same catalog through the gateway with the one-call use_skills tool
 //   hook64    : the same catalog delivered by `aiskills hook` (UserPromptSubmit), no gateway
 //   aiskills64: the same 64 in an AI Skills catalog, enabled for the project, built-in skills off,
 //               reached through the gateway (discover_capabilities -> load_skill)
@@ -117,7 +118,7 @@ for (const [id, task] of Object.entries(tasks)) {
         for (const name of await skillNames) await exec('node', [cli, 'skills', 'enable', name], { cwd: repo, env });
         await writeFile(mcp, JSON.stringify({ mcpServers: { aiskills: { command: process.execPath, args: [cli, 'mcp', '--allow-capability-execution'], env: { AI_SKILLS_HOME: home, AI_SKILLS_WARDEN_BINARY: warden, AI_SKILLS_BENCHMARK_NO_BUILTINS: '1' } } } }));
         flags = ['--setting-sources', '', '--strict-mcp-config', '--mcp-config', mcp, '--disable-slash-commands', '--append-system-prompt',
-          'Approved skills for this project are available through the aiskills MCP tools. For the task, call mcp__aiskills__discover_capabilities with the task text, then mcp__aiskills__load_skill for the relevant skill id, then answer.'];
+          arm === 'gateway2' ? 'Approved skills for this project are available through the aiskills MCP tools. Call mcp__aiskills__use_skills once with the task text; it returns the matching skills. Then answer.' : 'Approved skills for this project are available through the aiskills MCP tools. For the task, call mcp__aiskills__discover_capabilities with the task text, then mcp__aiskills__load_skill for the relevant skill id, then answer.'];
       }
       const started = performance.now();
       const { stdout, stderr, code } = await run('claude', ['-p', prompt(task.topic), '--model', model, '--effort', 'low', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'default', '--allowedTools', 'Skill,Read,Glob,Grep,mcp__aiskills', ...flags], { cwd: repo, env, timeoutMs: 300000 });
