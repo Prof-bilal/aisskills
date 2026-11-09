@@ -23,7 +23,60 @@ function outsideWrite(raw: string, call: GuardCall): boolean {
   return !inside(resolvePath(raw, call), call.cwd);
 }
 
+const WRAPPERS = new Set(['env', 'nohup', 'time', 'command', 'builtin', 'nice', 'stdbuf', 'xargs', 'timeout', 'sudo', 'doas']);
+const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh', 'fish', 'csh', 'tcsh']);
+const EVALS = new Set(['eval', 'source', '.', 'exec']);
+const NET_CMDS = new Set(['curl', 'wget', 'nc', 'ncat', 'netcat', 'socat', 'ssh', 'scp', 'sftp', 'ftp', 'telnet']);
+
+/**
+ * Quote-aware split into command segments (separated by ; & | newline) and words.
+ * shortcut: not a full shell grammar (no heredocs, arithmetic or function bodies); unknown constructs
+ * fall through to the regex checks below, and substitution is denied outright, which is the conservative side.
+ */
+export function splitShell(command: string): { segments: string[][]; substitution: boolean } {
+  const segments: string[][] = [[]]; let word = ''; let inWord = false; let quote: '"' | "'" | null = null; let substitution = false;
+  const endWord = () => { if (inWord) segments[segments.length - 1].push(word); word = ''; inWord = false; };
+  for (let i = 0; i < command.length; i++) {
+    const c = command[i];
+    if (quote === "'") { if (c === "'") quote = null; else word += c; inWord = true; continue; }
+    if (c === '$' && command[i + 1] === '(') substitution = true;
+    if (c === '`' || (c === '<' || c === '>') && command[i + 1] === '(') substitution = true;
+    if (quote === '"') { if (c === '"') quote = null; else word += c; inWord = true; continue; }
+    if (c === '"' || c === "'") { quote = c; inWord = true; continue; }
+    if (c === ' ' || c === '\t') { endWord(); continue; }
+    if (c === ';' || c === '&' || c === '|' || c === '\n' || c === '(' || c === ')') { endWord(); segments.push([]); continue; }
+    word += c; inWord = true;
+  }
+  endWord();
+  return { segments: segments.filter(s => s.length), substitution };
+}
+
+/** Structural denials: substitution, shell and eval indirection, and decoded payloads piped onward. */
+export function structuralReason(command: string, call: GuardCall): string | null {
+  const { segments, substitution } = splitShell(command);
+  if (substitution) return 'command substitution is blocked while user-installed skills are active';
+  const piped = /\|(?!\|)/.test(command);
+  for (const seg of segments) {
+    let words = seg.slice();
+    while (words.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0]) || WRAPPERS.has(words[0].split('/').pop() ?? ''))) {
+      const wrapper = words.shift()!;
+      if (wrapper === 'timeout' && words.length) words.shift();
+    }
+    const name = (words[0] ?? '').split('/').pop() ?? '';
+    if (EVALS.has(name)) return 'shell evaluation (eval, source, exec) is blocked while user-installed skills are active';
+    if (SHELLS.has(name)) return 'starting a shell from a command is blocked while user-installed skills are active';
+    if (name === 'base64' && piped && words.some(w => /^(-d|-D|--decode)$/.test(w))) return 'decoded input piped onward is blocked while user-installed skills are active';
+    if (NET_CMDS.has(name)) {
+      const hosts = [...command.matchAll(/https?:\/\/([^/\s:'"?#]+)/gi)].map(m => m[1].toLowerCase());
+      if (!hosts.length || hosts.some(h => !allowed(h, call.allowHosts))) return 'network commands to hosts that are not allowed are blocked while user-installed skills are active';
+    }
+  }
+  return null;
+}
+
 function bashReason(command: string, call: GuardCall): string | null {
+  const structural = structuralReason(command, call);
+  if (structural) return structural;
   if (/(^|[\s;&|`(])sudo(\s|$)/.test(command)) return 'sudo is not allowed while user-installed skills are active';
   const urls = [...command.matchAll(/https?:\/\/([^/\s:'"?#]+)/gi)].map(m => m[1].toLowerCase());
   if (NET_CLIENT.test(command) || NET_INLINE.test(command)) {

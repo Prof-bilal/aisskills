@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,rm,readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
@@ -94,4 +94,27 @@ test('use_skills returns only matched, wrapped skills in one call and nothing fo
   assert.deepEqual(hit.selected,['widgets']);assert.match(hit.instructions,/Widget instruction sentinel/);assert.match(hit.instructions,/<untrusted-skill id="widgets"/);
   const miss=JSON.parse((await client.callTool({name:'use_skills',arguments:{task:'translate good morning into French'}})).content[0].text);
   assert.deepEqual(miss.selected,[]);assert.equal(miss.instructions,'');
+});
+
+test('call_capability refuses tools whose schema this session did not fetch',async t=>{
+  const root=await mkdtemp(join(tmpdir(),'aiskills-scope-'));t.after(()=>rm(root,{recursive:true,force:true}));
+  const saved=process.env.AI_SKILLS_HOME;process.env.AI_SKILLS_HOME=join(root,'state');t.after(()=>{if(saved===undefined)delete process.env.AI_SKILLS_HOME;else process.env.AI_SKILLS_HOME=saved;});
+  const server=createMcpServer(new CoreRuntime({projectRoot:root,engines:[]}),undefined,{compact:true});
+  const client=new Client({name:'scope-test',version:'1'});const [a,b]=InMemoryTransport.createLinkedPair();await server.connect(a);await client.connect(b);
+  t.after(async()=>{await client.close();await server.close();});
+  const r=await client.callTool({name:'call_capability',arguments:{id:'widgets',entry:'default',tool:'read',arguments:{}}});
+  assert.equal(r.isError,true);assert.match(r.content[0].text,/not selected in this session/);
+});
+
+test('audit log chains every gateway call and detects tampering',async t=>{
+  const {appendAudit,verifyAuditText}=await import('../packages/cli/dist/audit.js');
+  const root=await mkdtemp(join(tmpdir(),'aiskills-audit-'));t.after(()=>rm(root,{recursive:true,force:true}));
+  await appendAudit(root,{tool:'search_tools',args:{task:'x'},ok:true});
+  await appendAudit(root,{tool:'call_capability',args:{token:'secret-value'},ok:false,reason:'denied'});
+  await appendAudit(root,{tool:'use_skills',args:{task:'y'},ok:true});
+  const text=await readFile(join(root,'audit.jsonl'),'utf8');
+  assert.equal(verifyAuditText(text),true);
+  assert.ok(!text.includes('secret-value'));
+  assert.equal(verifyAuditText(text.replace('"ok":false','"ok":true')),false);
+  const lines=text.trimEnd().split('\n');assert.equal(verifyAuditText([lines[0],lines[2]].join('\n')+'\n'),false);
 });

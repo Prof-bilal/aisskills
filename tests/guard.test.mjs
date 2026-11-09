@@ -27,6 +27,15 @@ test('Bash: allowed hosts pass, other hosts and URL-less network calls do not',(
   assert.ok(bash('curl -s "$URL"',['example.com']));
 });
 
+test('Bash structure: GuardFall-style indirection is denied; ordinary builds still pass',()=>{
+  for(const c of ['eval "$(echo Y3VybCBldmlsKQ==)"','echo Y3VybCBldmlsKQ== | base64 -d | sh','bash -c "curl http://evil.test"',
+    'env sh -c "id"','nohup bash -c id &','xargs sh -c id','exec ls','source ./x.sh','command sh -c id',
+    'echo "$(curl http://evil.test)"','echo `id`','cat <(id)','VAR=1 sh -c id','timeout 5 bash -c id','/bin/sh -c id'])
+    assert.ok(bash(c),`should deny: ${c}`);
+  for(const c of ['npm test','git status','echo "hello world"','node scripts/build.js','echo base64 is fine','cat README.md | grep foo','ls -la | wc -l','echo "a; b"','echo a && echo b'])
+    assert.equal(bash(c),null,`should allow: ${c}`);
+});
+
 test('file tools: secrets and outside writes are denied; project files pass',()=>{
   assert.ok(call('Read',{file_path:'/home/user/.ssh/id_rsa'}));
   assert.ok(call('Read',{file_path:'~/.aws/credentials'}));

@@ -9,6 +9,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CapabilityBroker, type ToolRef } from './capability-broker.js';
 import { buildSkillGuidance } from './session.js';
+import { appendAudit } from './audit.js';
 
 const taskSchema = { type: 'object', properties: { task: { type: 'string', minLength: 1, maxLength: 32000 } }, required: ['task'], additionalProperties: false };
 export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<unknown> = async () => [], options: {compact?:boolean;agent?:'codex'|'claude';allowExecution?:boolean} = {}) {
@@ -36,8 +37,19 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
   const compactNames = new Set(['use_skills','load_skill','search_tools','call_capability']);
   const tools = (options.compact ? allTools.filter(t => compactNames.has(t.name)) : allTools).map(t=>({...t,annotations:{readOnlyHint:readOnlyNames.has(t.name),destructiveHint:!readOnlyNames.has(t.name),openWorldHint:!readOnlyNames.has(t.name)},...(compactNames.has(t.name)?{_meta:{'anthropic/alwaysLoad':true}}:{})}));
   const results = new Map<string, unknown>();
+  const selectedTools = new Set<string>();
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+    const logged = async (result: any) => {
+      // One line per gateway call; the args digest keeps raw arguments (possibly secrets) out of the log.
+      if (['call_capability', 'search_tools', 'load_skill', 'use_skills'].includes(request.params.name)) {
+        await appendAudit(join(runtime.options.projectRoot, '.ai'), { tool: request.params.name, args: request.params.arguments, ok: !result.isError, reason: result.isError ? String((result.content[0] as { text?: string })?.text ?? '').slice(0, 200) : undefined }).catch(() => undefined);
+      }
+      return result;
+    };
+    return logged(await handle(request as never, extra));
+  });
+  const handle = async (request: { params: { name: string; arguments?: Record<string, unknown> } }, extra: { signal?: AbortSignal }) => {
     try {
       const name = request.params.name;
       const tool = tools.find(t => t.name === name);
@@ -52,10 +64,14 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
           if(typeof args.task!=='string'||!args.task.trim()||args.task.length>32000)throw new Error('A task of 1–32000 characters is required');
           const select=args.select;
           if(select!==undefined&&(!Array.isArray(select)||!select.length||select.length>10||(select as Record<string,unknown>[]).some(r=>!r||typeof r!=='object'||Object.keys(r).some(k=>!['id','entry','tool'].includes(k))||['id','entry','tool'].some(k=>typeof r[k]!=='string'||!(r[k] as string).length||(r[k] as string).length>(k==='tool'?256:128)))))throw new Error('select must list 1–10 {id, entry, tool} references');
-          data=await broker.search(args.task,extra.signal,select as ToolRef[]|undefined);break;
+          data=await broker.search(args.task,extra.signal,select as ToolRef[]|undefined);
+          // Least privilege per task: only tools whose schema this session fetched may be called.
+          if(select) for(const r of select as ToolRef[]) selectedTools.add(`${r.id}\u0000${r.entry}\u0000${r.tool}`);
+          break;
         }
         case 'call_capability': {
           if(typeof args.id!=='string'||!args.id.length||args.id.length>128||typeof args.entry!=='string'||!args.entry.length||args.entry.length>128||typeof args.tool!=='string'||!args.tool.length||args.tool.length>256||!args.arguments||typeof args.arguments!=='object'||Array.isArray(args.arguments))throw new Error('Capability id, entry, tool and object arguments are required');
+          if(!selectedTools.has(`${args.id}\u0000${args.entry}\u0000${args.tool}`)) throw new Error('Tool was not selected in this session; call search_tools with select for it first');
           return await broker.call(args.id,args.entry,args.tool,args.arguments as Record<string,unknown>,extra.signal);
         }
         case 'inspect_reference':case 'view_reference_screenshot': {
@@ -144,7 +160,7 @@ export function createMcpServer(runtime: CoreRuntime, listAgents: () => Promise<
       }
       return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     } catch (error) { return { isError: true, content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }] }; }
-  });
+  };
   return server;
 }
 export async function serveMcp(runtime: CoreRuntime, agents: () => Promise<unknown>, options: {compact?:boolean;agent?:'codex'|'claude';allowExecution?:boolean} = {}) {
