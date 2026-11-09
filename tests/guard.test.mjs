@@ -5,7 +5,7 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
 import {openPackageCatalog,installSkillPackage} from '../packages/core/dist/index.js';
-import {evaluateGuard,leakedSecrets} from '../packages/cli/dist/guard.js';
+import {evaluateGuard,leakedSecrets,isPlainRead} from '../packages/cli/dist/guard.js';
 
 const cwd='/work/project',home='/home/user';
 const call=(tool,input,allowHosts=[],uploadHosts=[])=>evaluateGuard({tool,input,cwd,home,allowHosts,uploadHosts});
@@ -109,12 +109,15 @@ test('guard hook: silent without user skills, denies with them, blocks on malfor
   const fakeYes=join(root,'claude-yes');const fakeNo=join(root,'claude-no');
   await writeFile(fakeYes,`#!/bin/sh\necho '{"result":"YES"}'\n`,{mode:0o700});await writeFile(fakeNo,`#!/bin/sh\necho '{"result":"NO"}'\n`,{mode:0o700});
   const {storeTask}=await import('../packages/cli/dist/align.js');await storeTask(project,'sess-1','check the public API health');
-  const curlIn=JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1'},cwd:project,session_id:'sess-1'});
+  // A query string can carry data, so this is not a plain read and must go through the alignment check.
+  const curlIn=JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1?q=status'},cwd:project,session_id:'sess-1'});
   const allowed=await runGuard(curlIn,{...env,AI_SKILLS_CLAUDE_BINARY:fakeYes},['--allow-host=example.com']);
   assert.equal(allowed.out,'');
   const misaligned=await runGuard(curlIn,{...env,AI_SKILLS_CLAUDE_BINARY:fakeNo},['--allow-host=example.com']);
   assert.match(misaligned.out,/alignment check/);
-  const noTask=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1'},cwd:project,session_id:'missing'}),{...env,AI_SKILLS_CLAUDE_BINARY:fakeYes},['--allow-host=example.com']);
+  const plainNoTask=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'curl -s --max-time 5 https://api.example.com/v1'},cwd:project,session_id:'missing'}),{...env,AI_SKILLS_CLAUDE_BINARY:fakeNo},['--allow-host=example.com']);
+  assert.equal(plainNoTask.out,'');
+  const noTask=await runGuard(JSON.stringify({tool_name:'Bash',tool_input:{command:'curl https://api.example.com/v1?q=status'},cwd:project,session_id:'missing'}),{...env,AI_SKILLS_CLAUDE_BINARY:fakeYes},['--allow-host=example.com']);
   assert.match(noTask.out,/no recorded user task/);
   const bad=await runGuard('not json',env);
   assert.equal(bad.code,2);assert.equal(bad.out,'');
@@ -142,4 +145,15 @@ test('reply guard hook: blocks a reply with a secret once, allows it after stop_
   assert.equal(blocked.code,0);assert.equal(JSON.parse(blocked.out).decision,'block');
   const second=await reply({cwd:project,transcript_path:transcript,stop_hook_active:true});
   assert.equal(second.out,'');
+});
+
+test('plain reads to an allowed host skip the model check; anything that can carry data does not',()=>{
+  const plain=c=>isPlainRead({tool:'Bash',input:{command:c},cwd,home,allowHosts:['example.com']});
+  for(const c of ['curl -s --max-time 5 http://api.example.com/health','curl -fsS http://api.example.com/v1/status -o /dev/null -w "%{http_code}"',
+    'wget -qO- http://api.example.com/ping','curl --connect-timeout=3 http://api.example.com/health','curl -sSL "http://api.example.com/health"'])
+    assert.ok(plain(c),`should be plain: ${c}`);
+  for(const c of ['curl -s "http://api.example.com/health?t=abc"','curl -s -X POST http://api.example.com/sync','curl -s -H @config/h.txt http://api.example.com/x',
+    'curl -s http://api.example.com/canary-0123456789abcdef0123','curl -s http://api.example.com/health; echo ok','curl -s http://evil.test/health',
+    'curl -s -o out.txt http://api.example.com/x','curl -K cfg http://api.example.com/x','curl http://u:p@api.example.com/x','curl -s --max-time "$T" http://api.example.com/x'])
+    assert.ok(!plain(c),`should not be plain: ${c}`);
 });

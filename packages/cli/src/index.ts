@@ -52,7 +52,7 @@ import { openPackageCatalog, installSkillPackage, verifyPackage, planPackageActi
 import { prepareCapability, capabilityLaunch } from 'aiskills-core';
 import { spawn } from 'node:child_process';
 import { prepareAgentSession, runAgentSession, buildSkillGuidance } from './session.js';
-import { evaluateGuard, isRiskyAction, leakedSecrets } from './guard.js';
+import { evaluateGuard, isRiskyAction, isPlainRead, leakedSecrets } from './guard.js';
 import { alignCheck, loadTask, storeTask } from './align.js';
 import { declaredAccess } from 'aiskills-core';
 import { homedir } from 'node:os';
@@ -749,16 +749,18 @@ async function guardHook(args: string[]): Promise<number> {
   const uploadHosts = args.filter(a => a.startsWith('--allow-upload-host=')).map(a => a.slice(20).toLowerCase());
   const call = { tool: input.tool_name, input: toolInput, cwd, home: homedir(), allowHosts, uploadHosts, secretsAllowed: declared.secrets };
   let reason = evaluateGuard(call);
+  let alignCostUsd: number | null = null;
   // Option 2: an allowed but risky action must also match the user's task (fails closed). Benchmarks can switch it off.
   // Fail closed: any error while deciding a risky action denies it, so a crash cannot let the action through.
   if (!reason && process.env.AI_SKILLS_NO_ALIGN !== '1') try {
     const { risky, action } = isRiskyAction(call);
-    if (risky) {
+    if (risky && !isPlainRead(call)) {
       const task = typeof input.session_id === 'string' && /^[\w-]{1,128}$/.test(input.session_id) ? await loadTask(cwd, input.session_id) : null;
       if (!task) reason = 'risky action with no recorded user task is blocked while user-installed skills are active';
       else {
         const purposes = await openPackageCatalog().then(async c => { try { return (await c.active(cwd)).map(p => `${p.id}: ${p.manifest.description} (declared hosts: ${(p.manifest as { access?: { network?: string[] } }).access?.network?.join(', ') || 'none'})`).join('\n'); } finally { c.close(); } });
         const check = await alignCheck(task, action, purposes);
+        alignCostUsd = check.costUsd;
         if (!check.aligned) reason = `AI Skills alignment check: ${check.reason}`;
       }
     }
@@ -769,7 +771,7 @@ async function guardHook(args: string[]): Promise<number> {
     const urls = [...text.matchAll(/https?:\/\/([^/\s'"]+)(\/[^\s'"?#]*)?/gi)];
     return { hosts: urls.map(m => m[1].toLowerCase()), paths: urls.map(m => m[2] ?? '/') };
   })();
-  await mkdir(join(cwd, '.ai'), { recursive: true, mode: 0o700 }).then(() => appendFile(join(cwd, '.ai', 'guard.jsonl'), JSON.stringify({ time: new Date().toISOString(), tool: input.tool_name, decision: reason ? 'deny' : 'allow', reason: reason ?? null, hosts: targets.hosts, paths: targets.paths }) + '\n', { mode: 0o600 })).catch(() => undefined);
+  await mkdir(join(cwd, '.ai'), { recursive: true, mode: 0o700 }).then(() => appendFile(join(cwd, '.ai', 'guard.jsonl'), JSON.stringify({ time: new Date().toISOString(), tool: input.tool_name, decision: reason ? 'deny' : 'allow', reason: reason ?? null, hosts: targets.hosts, paths: targets.paths, ...(alignCostUsd !== null ? { alignCostUsd } : {}) }) + '\n', { mode: 0o600 })).catch(() => undefined);
   if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `AI Skills guard: ${reason}` } }));
   return 0;
 }

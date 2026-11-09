@@ -195,3 +195,36 @@ export function leakedSecrets(reply: string, envValues: string[] = []): string[]
   for (const v of envValues) if (v.length >= 8 && reply.includes(v)) hits.push('project .env value');
   return hits;
 }
+
+// Plain read: a single curl/wget GET to an allowed host using only output/timeout flags, with a short path and no
+// query, cannot carry file contents, so it skips the model alignment check.
+// shortcut: data could still be spelled out in short path segments; an adaptive attacker can do that. Upgrade by
+// pinning declared paths per skill (access.paths) if that matters.
+const READ_FLAGS = new Set(['-s', '-S', '-f', '-L', '-i', '-I', '-sS', '-fsS', '-sSf', '-fsSL', '-sSL', '-sL', '-sf', '-fs', '-q', '-qO-', '-O-',
+  '--silent', '--show-error', '--fail', '--location', '--compressed', '--head', '--include', '--quiet']);
+const READ_FLAGS_WITH_VALUE = new Set(['--max-time', '-m', '--connect-timeout', '--retry', '-w', '--write-out', '-o', '-O']);
+export function isPlainRead(call: GuardCall): boolean {
+  if (call.tool !== 'Bash' || typeof call.input.command !== 'string') return false;
+  const { segments, substitution } = splitShell(call.input.command);
+  if (substitution || segments.length !== 1) return false;
+  const [name, ...rest] = segments[0];
+  if (name !== 'curl' && name !== 'wget') return false;
+  let url: string | null = null;
+  for (let i = 0; i < rest.length; i++) {
+    const w = rest[i];
+    if (/^https?:\/\//i.test(w)) { if (url) return false; url = w; continue; }
+    if (READ_FLAGS.has(w) || /^--(timeout|max-time|connect-timeout|retry)=\d+$/.test(w)) continue;
+    if (READ_FLAGS_WITH_VALUE.has(w) && i + 1 < rest.length) {
+      const v = rest[++i];
+      if ((w === '-o' || w === '-O') && v !== '/dev/null' && v !== '-') return false;
+      if (['--max-time', '-m', '--connect-timeout', '--retry'].includes(w) && !/^\d+(\.\d+)?$/.test(v)) return false;
+      continue;
+    }
+    return false;
+  }
+  if (!url) return false;
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { return false; }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash || !allowed(parsed.hostname.toLowerCase(), call.allowHosts)) return false;
+  return /^\/[A-Za-z0-9._\/-]{0,80}$/.test(parsed.pathname) && !/[A-Za-z0-9_-]{20,}/.test(parsed.pathname);
+}
