@@ -337,8 +337,12 @@ Imports accept `skill.yaml` or `SKILL.md` with name/description frontmatter.
 They snapshot content into the user configuration directory, reject symlinks,
 enforce size limits, and scan instructions without executing package code.
 GitHub imports pin the resolved commit and content hash. `--dry-run` previews
-an import; `--yes` approves only candidates without high-risk scanner findings.
-Otherwise use `review <id> --yes` after inspection. Activation is project scoped
+an import; `--yes` approves only local candidates without high-risk or hidden-content findings.
+Remote (GitHub) installs never auto-approve: run `aiskills skills inspect <id>`, read the findings and
+the pinned commit, then `aiskills skills review <id> --yes`. Hidden content (HTML comments, zero-width
+or invisible characters, hidden styling) always needs that review. At load time, user skill text is
+sanitised (those items are removed and the removal is reported), and a skill whose files changed after
+approval is refused. Activation is project scoped
 and writes a version-2 lockfile; version-1 lockfiles remain readable.
 
 Approved declarative packages participate in runtime task routing. Their
